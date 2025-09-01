@@ -1,5 +1,7 @@
 # Chatfield: Conversational Data Collection
 
+🎥 **Watch me develop this live!** Follow along as I build Chatfield in real-time: [YouTube Development Streams](https://www.youtube.com/@JasonSmithBuild/streams)
+
 Transform data collection from rigid forms into natural conversations powered by LLMs.
 
 Chatfield provides implementations in both Python and TypeScript/JavaScript, allowing you to create conversational interfaces for gathering structured data in any application.
