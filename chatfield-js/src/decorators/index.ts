@@ -200,8 +200,8 @@ function processGathererClass(cls: any): GathererMeta {
     const fieldMeta = meta.addField(fieldDesc.name, fieldDesc.description)
     
     // Add validation rules
-    fieldDesc.mustRules.forEach(rule => fieldMeta.addMustRule(rule))
-    fieldDesc.rejectRules.forEach(rule => fieldMeta.addRejectRule(rule))
+    fieldDesc.mustRules.forEach((rule: string) => fieldMeta.addMustRule(rule))
+    fieldDesc.rejectRules.forEach((rule: string) => fieldMeta.addRejectRule(rule))
     
     if (fieldDesc.hint) {
       fieldMeta.setHint(fieldDesc.hint)

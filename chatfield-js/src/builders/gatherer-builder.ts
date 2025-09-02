@@ -4,8 +4,12 @@
 
 import { GathererMeta, FieldMeta } from '../core/metadata'
 import { Gatherer } from '../core/gatherer'
+import { Interview, FieldProxy } from '../core/interview'
 import { GathererOptions } from '../core/types'
 import { EnhancedFieldBuilder, RoleBuilder } from './field-builder'
+
+// Re-export RoleBuilder from field-builder
+export { RoleBuilder } from './field-builder'
 
 /**
  * Field builder for configuring individual fields
@@ -54,7 +58,7 @@ export class FieldBuilder {
   /**
    * Add another field
    */
-  field(name: string, description: string): FieldBuilder {
+  field(name: string, description: string = ''): EnhancedFieldBuilder {
     return this.parentBuilder.field(name, description)
   }
 
@@ -80,9 +84,9 @@ export class FieldBuilder {
   }
 
   /**
-   * Build the final gatherer
+   * Build the final Interview
    */
-  build(options?: GathererOptions): Gatherer {
+  build(options?: GathererOptions): Interview {
     return this.parentBuilder.build(options)
   }
 }
@@ -160,10 +164,96 @@ export class GathererBuilder {
   }
 
   /**
-   * Build the final gatherer
+   * Build the final Interview instance
    */
-  build(options?: GathererOptions): Gatherer {
-    return new Gatherer(this.meta.clone(), options)
+  build(options?: GathererOptions): Interview {
+    // Create an Interview instance with the builder's metadata (skip field discovery)
+    const interview = new Interview(true)
+    
+    // Set the type and description
+    interview._chatfield.type = this.meta.type || ''
+    interview._chatfield.desc = this.meta.docstring || ''
+    
+    // Set roles
+    const roles = this.meta.getRoles()
+    const aliceRole = roles.get('alice')
+    if (aliceRole) {
+      interview._chatfield.roles.alice = {
+        type: aliceRole.type || undefined,
+        traits: aliceRole.traits || []
+      }
+    }
+    const bobRole = roles.get('bob')
+    if (bobRole) {
+      interview._chatfield.roles.bob = {
+        type: bobRole.type || undefined,
+        traits: bobRole.traits || []
+      }
+    }
+    
+    // Set fields with all casts
+    this.meta.getFields().forEach(field => {
+      // Convert casts Map to object
+      const castsObj: Record<string, any> = {}
+      field.casts.forEach((value, key) => {
+        castsObj[key] = value
+      })
+      
+      interview._chatfield.fields[field.name] = {
+        desc: field.description,
+        specs: {
+          must: field.mustRules || [],
+          reject: field.rejectRules || [],
+          hint: field.hint ? [field.hint] : [],
+          confidential: field.confidential,
+          conclude: field.conclude
+        },
+        casts: castsObj,
+        value: null
+      }
+    })
+    
+    // Return a Proxy to enable field access like interview.field_name
+    return new Proxy(interview, {
+      get(target, prop, receiver) {
+        // If it's a known property or method, return it
+        if (prop in target || typeof prop === 'symbol') {
+          return Reflect.get(target, prop, receiver)
+        }
+        
+        // If it's a field name, return the field value or null
+        const propStr = String(prop)
+        if (target._chatfield.fields[propStr]) {
+          const field = target._chatfield.fields[propStr]
+          if (field.value) {
+            // Create a FieldProxy with dynamic property access
+            const fieldProxy = new FieldProxy(field.value.value, field)
+            
+            // Return a Proxy around FieldProxy to handle dynamic properties
+            return new Proxy(fieldProxy, {
+              get(fpTarget, fpProp) {
+                // Check if it's a known property/method on FieldProxy
+                if (fpProp in fpTarget) {
+                  return Reflect.get(fpTarget, fpProp)
+                }
+                
+                // Otherwise, check if it's a dynamic transformation like as_lang_fr
+                const propName = String(fpProp)
+                if (field.value && field.value[propName] !== undefined) {
+                  return field.value[propName]
+                }
+                
+                return undefined
+              }
+            })
+          }
+          return null
+        }
+        
+        // Otherwise return undefined
+        return undefined
+      }
+    }) as Interview
   }
 
   /**
@@ -199,13 +289,13 @@ export function chatfield(): GathererBuilder {
 }
 
 /**
- * Convenience function to create a simple gatherer with multiple fields
+ * Convenience function to create a simple Interview with multiple fields
  */
 export function simpleGatherer(fields: Record<string, string>, options?: {
   userContext?: string[]
   agentContext?: string[]
   docstring?: string
-}): Gatherer {
+}): Interview {
   const builder = chatfield()
 
   // Add docstring
@@ -224,12 +314,15 @@ export function simpleGatherer(fields: Record<string, string>, options?: {
   }
 
   // Add fields
-  let currentBuilder: FieldBuilder | GathererBuilder = builder
+  let currentBuilder: EnhancedFieldBuilder | GathererBuilder = builder
   const fieldEntries = Object.entries(fields)
   
   for (let i = 0; i < fieldEntries.length; i++) {
-    const [name, description] = fieldEntries[i]
-    currentBuilder = currentBuilder.field(name, description)
+    const entry = fieldEntries[i]
+    if (entry) {
+      const [name, description] = entry
+      currentBuilder = currentBuilder.field(name, description)
+    }
   }
 
   return currentBuilder.build()

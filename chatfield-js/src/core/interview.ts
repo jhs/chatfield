@@ -11,6 +11,8 @@ export interface FieldChatfield {
     must?: string[]
     reject?: string[]
     hint?: string[]
+    confidential?: boolean
+    conclude?: boolean
   }
   casts?: Record<string, {
     type: string
@@ -91,7 +93,7 @@ export class Interview {
     fields: Record<string, FieldChatfield>
   }
 
-  constructor() {
+  constructor(skipDiscovery: boolean = false) {
     const className = this.constructor.name
     const classDesc = (this.constructor as any).description || className
     const ctor = this.constructor as any
@@ -112,8 +114,10 @@ export class Interview {
       fields: {}
     }
 
-    // Discover fields from class methods
-    this._discoverFields()
+    // Discover fields from class methods (unless using builder pattern)
+    if (!skipDiscovery) {
+      this._discoverFields()
+    }
   }
 
   private _discoverFields() {
@@ -208,6 +212,15 @@ export class Interview {
 
   // Dynamic property access for fields
   [key: string]: any
+  
+  // Override property access to return field values as FieldProxy
+  private __getField(name: string): FieldProxy | null {
+    const field = this._chatfield.fields[name]
+    if (field && field.value) {
+      return new FieldProxy(field.value.value, field)
+    }
+    return null
+  }
 }
 
 // Decorator functions

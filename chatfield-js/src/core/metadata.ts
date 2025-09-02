@@ -171,6 +171,20 @@ export class GathererMeta {
   }
 
   /**
+   * Set the interview type
+   */
+  setType(typeName: string): void {
+    this.type = typeName
+  }
+
+  /**
+   * Get roles configuration
+   */
+  getRoles(): Map<string, RoleInfo> {
+    return this.roles
+  }
+
+  /**
    * Add a field and return its metadata object
    */
   addField(name: string, description: string): FieldMeta {
@@ -222,12 +236,6 @@ export class GathererMeta {
     return this.getFields().filter(field => field.shouldShow(collectedData))
   }
 
-  /**
-   * Set the interview type
-   */
-  setType(type: string): void {
-    this.type = type
-  }
 
   /**
    * Set role type (e.g., alice -> "Senior Developer")

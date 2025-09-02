@@ -269,7 +269,7 @@ export class MockLLMBackend extends LLMBackend {
     if (this.callCount < this.responses.length) {
       const response = this.responses[this.callCount]
       this.callCount++
-      return response
+      return response ?? 'Mock response'
     }
     return 'Mock response'
   }
@@ -281,7 +281,7 @@ export class MockLLMBackend extends LLMBackend {
     if (this.validationCallCount < this.validationResponses.length) {
       const response = this.validationResponses[this.validationCallCount]
       this.validationCallCount++
-      return response
+      return response ?? 'VALID'
     }
     return 'VALID'
   }

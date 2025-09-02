@@ -23,25 +23,12 @@ export class CastBuilder {
       type: this.primitiveType,
       prompt: prompt || this.basePrompt
     }
-    this.parent.fieldMeta.addCast(this.baseName, castInfo)
+    this.parent.addCastInternal(this.baseName, castInfo)
     return this.parent
   }
 
-  // Property access creates sub-casts (e.g., as_lang.fr)
-  get fr() { return this.subCast('fr') }
-  get es() { return this.subCast('es') }
-  get de() { return this.subCast('de') }
-  get it() { return this.subCast('it') }
-  get pt() { return this.subCast('pt') }
-  get ja() { return this.subCast('ja') }
-  get zh() { return this.subCast('zh') }
-  get ru() { return this.subCast('ru') }
-  get ar() { return this.subCast('ar') }
-  get hi() { return this.subCast('hi') }
-  get th() { return this.subCast('th') }
-  
-  // Generic sub-cast creator
-  private subCast(name: string) {
+  // Generic sub-cast creator (public for Proxy access)
+  subCast(name: string) {
     return (prompt?: string) => {
       const compoundName = `${this.baseName}_${name}`
       const compoundPrompt = this.basePrompt.includes('{name}') 
@@ -52,7 +39,7 @@ export class CastBuilder {
         type: this.primitiveType,
         prompt: prompt || compoundPrompt
       }
-      this.parent.fieldMeta.addCast(compoundName, castInfo)
+      this.parent.addCastInternal(compoundName, castInfo)
       return this.parent
     }
   }
@@ -76,8 +63,12 @@ export class ChoiceBuilder {
   get selection() { return this.createChoice('selection') }
   get priority() { return this.createChoice('priority') }
   get skill() { return this.createChoice('skill') }
+  get skills() { return this.createChoice('skills') }
   get component() { return this.createChoice('component') }
   get option() { return this.createChoice('option') }
+  get color() { return this.createChoice('color') }
+  get languages() { return this.createChoice('languages') }
+  get reviewers() { return this.createChoice('reviewers') }
   
   private createChoice(name: string) {
     return (...choices: string[]) => {
@@ -89,7 +80,7 @@ export class ChoiceBuilder {
         null: this.nullAllowed,
         multi: this.multiAllowed
       }
-      this.parent.fieldMeta.addCast(compoundName, castInfo)
+      this.parent.addCastInternal(compoundName, castInfo)
       return this.parent
     }
   }
@@ -102,15 +93,18 @@ export class ChoiceBuilder {
  * Enhanced field builder with Python-like transformation decorators
  */
 export class EnhancedFieldBuilder {
-  fieldMeta: FieldMeta
+  private fieldMeta: FieldMeta
   private parentBuilder: GathererBuilder
 
-  // Cast decorators
-  as_int: CastBuilder
-  as_float: CastBuilder
-  as_bool: CastBuilder
-  as_percent: CastBuilder
-  as_lang: CastBuilder
+  // Cast decorators (with underscore to avoid collision with methods)
+  private as_int_: CastBuilder
+  private as_float_: CastBuilder
+  private as_bool_base: CastBuilder
+  private as_percent_: CastBuilder
+  as_int: any   // For sub-attributes like as_int.neg1
+  as_lang: any  // Keep this one as property for sub-attributes
+  as_bool: any  // For sub-attributes like as_bool.even
+  as_str: any   // For sub-attributes like as_str.uppercase
   
   // Choice cardinality decorators
   as_one: ChoiceBuilder
@@ -123,11 +117,45 @@ export class EnhancedFieldBuilder {
     this.parentBuilder = parentBuilder
     
     // Initialize cast decorators
-    this.as_int = new CastBuilder(this, 'as_int', 'int', 'parse as integer')
-    this.as_float = new CastBuilder(this, 'as_float', 'float', 'parse as floating point number')
-    this.as_bool = new CastBuilder(this, 'as_bool', 'bool', 'parse as boolean (true/false)')
-    this.as_percent = new CastBuilder(this, 'as_percent', 'float', 'parse as percentage (0.0 to 1.0)')
-    this.as_lang = new CastBuilder(this, 'as_lang', 'str', 'translate to {name}')
+    this.as_int_ = new CastBuilder(this, 'as_int', 'int', 'parse as integer')
+    this.as_float_ = new CastBuilder(this, 'as_float', 'float', 'parse as floating point number')
+    this.as_bool_base = new CastBuilder(this, 'as_bool', 'bool', 'parse as boolean (true/false)')
+    this.as_percent_ = new CastBuilder(this, 'as_percent', 'float', 'parse as percentage (0.0 to 1.0)')
+    
+    // Create CastBuilders for sub-attributes with Proxy support
+    const langBuilder = new CastBuilder(this, 'as_lang', 'str', 'translate to {name}')
+    const boolBuilder = new CastBuilder(this, 'as_bool', 'bool', 'parse as boolean for {name}')
+    const strBuilder = new CastBuilder(this, 'as_str', 'str', 'parse as string {name}')
+    const intBuilder = new CastBuilder(this, 'as_int', 'int', 'parse as integer for {name}')
+    
+    // Create a function that proxies both callable and property access
+    const createProxiedCast = (builder: CastBuilder) => {
+      const handler = {
+        apply: (target: any, thisArg: any, args: any[]) => {
+          return builder.apply(args[0])
+        },
+        get: (target: any, prop: string) => {
+          if (prop in builder) {
+            return (builder as any)[prop]
+          }
+          // Dynamic property access creates sub-casts
+          return builder.subCast(prop)
+        }
+      }
+      return new Proxy(() => {}, handler)
+    }
+    
+    // Make as_int callable with dynamic sub-properties
+    this.as_int = createProxiedCast(intBuilder)
+    
+    // Make as_lang callable with dynamic sub-properties
+    this.as_lang = createProxiedCast(langBuilder)
+    
+    // Make as_bool callable with dynamic sub-properties
+    this.as_bool = createProxiedCast(boolBuilder)
+    
+    // Make as_str callable with dynamic sub-properties
+    this.as_str = createProxiedCast(strBuilder)
     
     // Initialize choice decorators
     this.as_one = new ChoiceBuilder(this, 'as_one', false, false)
@@ -193,31 +221,46 @@ export class EnhancedFieldBuilder {
   }
 
   /**
+   * Internal method to add cast information
+   */
+  addCastInternal(name: string, castInfo: any): void {
+    this.fieldMeta.addCast(name, castInfo)
+  }
+
+  /**
    * Apply integer transformation directly
    */
   asInt(): EnhancedFieldBuilder {
-    return this.as_int.apply()
+    return this.as_int()
   }
 
   /**
    * Apply float transformation directly
    */
   asFloat(): EnhancedFieldBuilder {
-    return this.as_float.apply()
+    return this.as_float_.apply()
+  }
+  
+  as_float(): EnhancedFieldBuilder {
+    return this.as_float_.apply()
   }
 
   /**
    * Apply boolean transformation directly
    */
   asBool(): EnhancedFieldBuilder {
-    return this.as_bool.apply()
+    return this.as_bool_base.apply()
   }
 
   /**
    * Apply percentage transformation directly
    */
   asPercent(): EnhancedFieldBuilder {
-    return this.as_percent.apply()
+    return this.as_percent_.apply()
+  }
+  
+  as_percent(): EnhancedFieldBuilder {
+    return this.as_percent_.apply()
   }
 
   /**
@@ -296,14 +339,14 @@ export class TraitBuilder {
  * Role builder for alice/bob configuration
  */
 export class RoleBuilder {
-  trait: TraitBuilder
+  private traitBuilder: TraitBuilder
 
   constructor(
     private parentBuilder: GathererBuilder,
     private role: string
   ) {
     this.parentBuilder.setCurrentRole(role)
-    this.trait = new TraitBuilder(this, role)
+    this.traitBuilder = new TraitBuilder(this, role)
   }
 
   /**
@@ -311,6 +354,14 @@ export class RoleBuilder {
    */
   type(roleType: string): RoleBuilder {
     this.parentBuilder.setRoleType(this.role, roleType)
+    return this
+  }
+
+  /**
+   * Add a trait (makes the builder itself callable for trait)
+   */
+  trait(traitName: string): RoleBuilder {
+    this.addTrait(this.role, traitName)
     return this
   }
 

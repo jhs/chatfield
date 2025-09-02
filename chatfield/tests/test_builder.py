@@ -1,330 +1,205 @@
-"""Unit tests for Chatfield builder pattern."""
+"""Unit tests for Chatfield builder pattern API.
+
+This file focuses on builder-specific behavior like method chaining,
+builder API surface, and builder-unique features. Tests for the
+resulting Interview instances are in test_interview.py.
+"""
 
 import pytest
 from chatfield import chatfield
 
 
-class TestBasicBuilder:
-    """Test basic builder functionality."""
+class TestBuilderAPI:
+    """Test builder pattern API and method chaining."""
     
-    def test_simple_interview(self):
-        """Test basic Interview creation with builder."""
+    def test_builder_method_chaining(self):
+        """Test that builder methods return appropriate builders for chaining."""
+        builder = chatfield()
+        
+        # Main builder methods return the builder
+        assert builder.type("Test") is builder
+        assert builder.desc("Description") is builder
+        
+        # Field returns a FieldBuilder (different context)
+        field_builder = builder.field("test")
+        from chatfield.builder import FieldBuilder
+        assert isinstance(field_builder, FieldBuilder)
+        
+        # Role builders return RoleBuilder
+        alice_builder = builder.alice()
+        bob_builder = builder.bob()
+        from chatfield.builder import RoleBuilder
+        assert isinstance(alice_builder, RoleBuilder)
+        assert isinstance(bob_builder, RoleBuilder)
+    
+    def test_builder_field_context_switching(self):
+        """Test switching between field contexts in builder."""
         instance = (chatfield()
-            .type("SimpleInterview")
-            .desc("A simple interview")
-            .field("name").desc("Your name")
-            .field("email").desc("Your email")
+            .type("ContextTest")
+            .field("field1")
+                .desc("First field")
+                .must("rule1")
+            .field("field2")  # Switch to new field
+                .desc("Second field")
+                .must("rule2")
+            .field("field3")
+                .desc("Third field")
             .build())
         
         meta = instance._chatfield
-        assert meta['type'] == "SimpleInterview"
-        assert meta['desc'] == "A simple interview"
-        assert len(meta['fields']) == 2
-        assert "name" in meta['fields']
-        assert "email" in meta['fields']
-        assert meta['fields']["name"]['desc'] == "Your name"
-        assert meta['fields']["email"]['desc'] == "Your email"
+        assert "rule1" in meta['fields']['field1']['specs']['must']
+        assert "rule2" in meta['fields']['field2']['specs']['must']
+        assert len(meta['fields']) == 3
     
-    def test_field_validation_rules(self):
-        """Test adding validation rules with builder."""
+    def test_builder_role_context_switching(self):
+        """Test switching between role and field contexts."""
         instance = (chatfield()
-            .type("ValidatedInterview")
-            .field("field")
-                .desc("Test field")
-                .must("specific requirement")
-                .reject("avoid this")
-                .hint("Helpful tip")
-            .build())
-        
-        field_meta = instance._chatfield['fields']["field"]
-        assert "specific requirement" in field_meta['specs']['must']
-        assert "avoid this" in field_meta['specs']['reject']
-        assert "Helpful tip" in field_meta['specs']['hint']
-    
-    def test_multiple_validation_rules(self):
-        """Test multiple validation rules on same field."""
-        instance = (chatfield()
-            .type("MultiRuleInterview")
-            .field("field")
-                .desc("Test field")
-                .must("rule 1")
-                .must("rule 2")
-                .must("rule 3")
-            .build())
-        
-        field_meta = instance._chatfield['fields']["field"]
-        # Builder should maintain order
-        assert field_meta['specs']['must'] == ["rule 1", "rule 2", "rule 3"]
-    
-    def test_multiple_hints(self):
-        """Test multiple hints on same field."""
-        instance = (chatfield()
-            .type("MultiHintInterview")
-            .field("field")
-                .desc("Test field with multiple hints")
-                .hint('First hint')
-                .hint('Second hint')
-                .hint('Third hint')
-            .build())
-        
-        field_meta = instance._chatfield['fields']['field']
-        assert field_meta['specs']['hint'] == ['First hint', 'Second hint', 'Third hint']
-        assert len(field_meta['specs']['hint']) == 3
-    
-    def test_combined_field_features(self):
-        """Test field with all feature types combined."""
-        instance = (chatfield()
-            .type("CombinedInterview")
-            .field("complex_field")
-                .desc("Complex field")
-                .must("required info")
-                .reject("forbidden content")
-                .hint("Helpful guidance")
-            .build())
-        
-        field_meta = instance._chatfield['fields']["complex_field"]
-        
-        assert field_meta['desc'] == "Complex field"
-        assert "required info" in field_meta['specs']['must']
-        assert "forbidden content" in field_meta['specs']['reject']
-        assert "Helpful guidance" in field_meta['specs']['hint']
-
-
-class TestRoleConfiguration:
-    """Test alice and bob role configuration."""
-    
-    def test_alice_role(self):
-        """Test alice role configuration."""
-        instance = (chatfield()
-            .type("WithAlice")
-            .alice().type("Senior Developer")
-            .field("field").desc("Test field")
-            .build())
-        
-        meta = instance._chatfield
-        assert meta['roles']['alice']['type'] == "Senior Developer"
-    
-    def test_alice_traits(self):
-        """Test alice role with traits."""
-        instance = (chatfield()
-            .type("WithAliceTraits")
+            .type("RoleFieldTest")
             .alice()
                 .type("Interviewer")
                 .trait("patient")
-                .trait("thorough")
-            .field("field").desc("Test field")
-            .build())
-        
-        meta = instance._chatfield
-        assert meta['roles']['alice']['type'] == "Interviewer"
-        assert "patient" in meta['roles']['alice']['traits']
-        assert "thorough" in meta['roles']['alice']['traits']
-    
-    def test_bob_role(self):
-        """Test bob role configuration."""
-        instance = (chatfield()
-            .type("WithBob")
-            .bob().type("Job Candidate")
-            .field("field").desc("Test field")
-            .build())
-        
-        meta = instance._chatfield
-        assert meta['roles']['bob']['type'] == "Job Candidate"
-    
-    def test_bob_traits(self):
-        """Test bob role with traits."""
-        instance = (chatfield()
-            .type("WithBobTraits")
-            .bob()
-                .type("User")
-                .trait("technical")
-                .trait("curious")
-            .field("field").desc("Test field")
-            .build())
-        
-        meta = instance._chatfield
-        assert meta['roles']['bob']['type'] == "User"
-        assert "technical" in meta['roles']['bob']['traits']
-        assert "curious" in meta['roles']['bob']['traits']
-    
-    def test_both_roles(self):
-        """Test configuring both alice and bob roles."""
-        instance = (chatfield()
-            .type("FullRoles")
-            .desc("Test interview process")
-            .alice()
-                .type("Interviewer")
-                .trait("professional")
-            .bob()
+            .field("question")  # Switch from role to field
+                .desc("Your question")
+            .bob()  # Switch to different role
                 .type("Candidate")
-                .trait("experienced")
-            .field("field1").desc("First field")
-            .field("field2").desc("Second field")
+            .field("answer")  # Back to fields
+                .desc("Your answer")
             .build())
         
         meta = instance._chatfield
-        
-        # Check description
-        assert meta['desc'] == "Test interview process"
-        
-        # Check alice role
         assert meta['roles']['alice']['type'] == "Interviewer"
-        assert "professional" in meta['roles']['alice']['traits']
-        
-        # Check bob role
         assert meta['roles']['bob']['type'] == "Candidate"
-        assert "experienced" in meta['roles']['bob']['traits']
-        
-        # Check fields
-        assert "field1" in meta['fields']
-        assert "field2" in meta['fields']
-        assert meta['fields']["field1"]['desc'] == "First field"
-        assert meta['fields']["field2"]['desc'] == "Second field"
-
-
-class TestFieldTransformations:
-    """Test field transformation features."""
+        assert 'question' in meta['fields']
+        assert 'answer' in meta['fields']
     
-    def test_type_transformations(self):
-        """Test basic type transformations."""
+    def test_builder_sub_attribute_syntax(self):
+        """Test builder's sub-attribute syntax for transformations."""
         instance = (chatfield()
-            .type("TypedInterview")
-            .field("age")
-                .desc("Your age")
-                .as_int()
-            .field("salary")
-                .desc("Expected salary")
-                .as_float()
-            .field("active")
-                .desc("Are you active?")
-                .as_bool()
-            .field("confidence")
-                .desc("Confidence level")
-                .as_percent()
-            .build())
-        
-        assert 'as_int' in instance._chatfield['fields']['age']['casts']
-        assert 'as_float' in instance._chatfield['fields']['salary']['casts']
-        assert 'as_bool' in instance._chatfield['fields']['active']['casts']
-        assert 'as_percent' in instance._chatfield['fields']['confidence']['casts']
-    
-    def test_language_transformations(self):
-        """Test language transformations."""
-        instance = (chatfield()
-            .type("MultiLangInterview")
-            .field("greeting")
-                .desc("Say hello")
-                .as_lang.fr()
+            .type("SubAttrTest")
+            .field("data")
+                .desc("Data field")
+                .as_lang.fr()  # Sub-attribute syntax
                 .as_lang.es()
-            .build())
-        
-        field_casts = instance._chatfield['fields']['greeting']['casts']
-        assert 'as_lang_fr' in field_casts
-        assert 'as_lang_es' in field_casts
-    
-    def test_custom_transformations(self):
-        """Test custom sub-attribute transformations."""
-        instance = (chatfield()
-            .type("CustomTransform")
-            .field("number")
-                .desc("A number")
                 .as_bool.even("True if even")
                 .as_str.uppercase("In uppercase")
             .build())
         
-        field_casts = instance._chatfield['fields']['number']['casts']
+        field_casts = instance._chatfield['fields']['data']['casts']
+        assert 'as_lang_fr' in field_casts
+        assert 'as_lang_es' in field_casts
         assert 'as_bool_even' in field_casts
         assert 'as_str_uppercase' in field_casts
     
-    def test_choice_cardinality(self):
-        """Test choice cardinality features."""
+    def test_builder_choice_syntax(self):
+        """Test builder's choice cardinality syntax."""
         instance = (chatfield()
-            .type("ChoiceInterview")
-            .field("color")
-                .desc("Favorite color")
-                .as_one.selection("red", "green", "blue")
-            .field("priority")
-                .desc("Priority level")
-                .as_maybe.selection("low", "medium", "high")
-            .field("languages")
-                .desc("Programming languages")
-                .as_multi.selection("python", "javascript", "rust")
-            .field("reviewers")
-                .desc("Code reviewers")
-                .as_any.selection("alice", "bob", "charlie")
+            .type("ChoiceTest")
+            .field("single")
+                .as_one.selection("a", "b", "c")
+            .field("optional")
+                .as_maybe.selection("x", "y", "z")
+            .field("multiple")
+                .as_multi.selection("1", "2", "3")
+            .field("any_number")
+                .as_any.selection("red", "green", "blue")
             .build())
         
-        # Note: The builder uses different names for choice casts
-        color_cast = instance._chatfield['fields']['color']['casts'].get('as_one_selection')
-        if color_cast:
-            assert color_cast['type'] == 'choice'
-            assert color_cast['choices'] == ['red', 'green', 'blue']
-            assert color_cast['null'] is False
-            assert color_cast['multi'] is False
-
-
-class TestSpecialFields:
-    """Test special field features."""
+        # Check that choice configurations are stored
+        single = instance._chatfield['fields']['single']['casts'].get('as_one_selection')
+        optional = instance._chatfield['fields']['optional']['casts'].get('as_maybe_selection')
+        multiple = instance._chatfield['fields']['multiple']['casts'].get('as_multi_selection')
+        any_num = instance._chatfield['fields']['any_number']['casts'].get('as_any_selection')
+        
+        if single:
+            assert single['choices'] == ['a', 'b', 'c']
+            assert single['null'] is False
+            assert single['multi'] is False
+        
+        if optional:
+            assert optional['null'] is True
+            assert optional['multi'] is False
+        
+        if multiple:
+            assert multiple['null'] is False
+            assert multiple['multi'] is True
+        
+        if any_num:
+            assert any_num['null'] is True
+            assert any_num['multi'] is True
     
-    def test_confidential_field(self):
-        """Test confidential field configuration."""
+    def test_builder_special_field_methods(self):
+        """Test builder's special field methods (confidential, conclude)."""
         instance = (chatfield()
-            .type("ConfidentialInterview")
+            .type("SpecialFields")
             .field("secret")
-                .desc("Secret information")
+                .desc("Secret data")
                 .confidential()
-            .build())
-        
-        field = instance._chatfield['fields']['secret']
-        assert field['specs']['confidential'] is True
-    
-    def test_conclude_field(self):
-        """Test conclude field configuration."""
-        instance = (chatfield()
-            .type("ConcludeInterview")
-            .field("rating")
+            .field("final")
                 .desc("Final rating")
                 .conclude()
             .build())
         
-        field = instance._chatfield['fields']['rating']
-        assert field['specs']['conclude'] is True
-        assert field['specs']['confidential'] is True  # Conclude implies confidential
-
-
-class TestBuilderEdgeCases:
-    """Test edge cases and error conditions."""
+        secret = instance._chatfield['fields']['secret']
+        final = instance._chatfield['fields']['final']
+        
+        assert secret['specs']['confidential'] is True
+        assert final['specs']['conclude'] is True
+        assert final['specs']['confidential'] is True  # Conclude implies confidential
     
-    def test_empty_interview(self):
-        """Test creating interview with no fields."""
+    def test_builder_accumulation_behavior(self):
+        """Test that builder accumulates rules properly."""
         instance = (chatfield()
-            .type("Empty")
-            .desc("Empty interview")
+            .type("AccumulationTest")
+            .alice()
+                .trait("trait1")
+                .trait("trait2")
+                .trait("trait3")
+            .field("field")
+                .must("rule1")
+                .must("rule2")
+                .hint("hint1")
+                .hint("hint2")
+                .reject("reject1")
             .build())
         
-        meta = instance._chatfield
-        assert meta['type'] == "Empty"
-        assert meta['desc'] == "Empty interview"
-        assert len(meta['fields']) == 0
-    
-    def test_minimal_interview(self):
-        """Test creating interview with minimal configuration."""
-        instance = chatfield().build()
+        alice_traits = instance._chatfield['roles']['alice']['traits']
+        field_specs = instance._chatfield['fields']['field']['specs']
         
-        meta = instance._chatfield
-        assert meta['type'] == ""
-        assert meta['desc'] == ""
-        assert len(meta['fields']) == 0
+        # Should accumulate all traits and rules
+        assert alice_traits == ["trait1", "trait2", "trait3"]
+        assert field_specs['must'] == ["rule1", "rule2"]
+        assert field_specs['hint'] == ["hint1", "hint2"]
+        assert field_specs['reject'] == ["reject1"]
     
-    def test_field_order_preservation(self):
-        """Test that field order is preserved."""
-        instance = (chatfield()
-            .type("OrderedInterview")
-            .field("first").desc("First")
-            .field("second").desc("Second")
-            .field("third").desc("Third")
-            .field("fourth").desc("Fourth")
-            .build())
+    def test_builder_without_build(self):
+        """Test that builder requires build() to create instance."""
+        builder = chatfield().type("Test").field("field").desc("Description")
         
-        field_names = list(instance._chatfield['fields'].keys())
-        assert field_names == ['first', 'second', 'third', 'fourth']
+        # Builder itself is not an Interview
+        from chatfield import Interview
+        assert not isinstance(builder, Interview)
+        
+        # After build(), it returns an Interview
+        instance = builder.build()
+        assert isinstance(instance, Interview)
+    
+    def test_builder_reuse(self):
+        """Test that builder can be reused to create multiple instances."""
+        builder = (chatfield()
+            .type("Template")
+            .field("name").desc("Name"))
+        
+        # Create multiple instances from same builder
+        instance1 = builder.build()
+        instance2 = builder.build()
+        
+        # Should be different instances
+        assert instance1 is not instance2
+        
+        # But with same structure
+        assert instance1._chatfield['type'] == instance2._chatfield['type']
+        assert instance1._chatfield['fields'].keys() == instance2._chatfield['fields'].keys()
+        
+        # Modifications to one don't affect the other
+        instance1._chatfield['fields']['name']['value'] = {'value': 'test'}
+        assert instance2._chatfield['fields']['name']['value'] is None

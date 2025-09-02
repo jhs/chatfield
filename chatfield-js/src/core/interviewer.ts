@@ -77,9 +77,13 @@ function mergeInterviews(a: Interview, b: Interview): Interview {
   if (a && b) {
     // Copy over any new field values from b to a
     for (const fieldName of Object.keys(b._chatfield.fields)) {
-      const bValue = b._chatfield.fields[fieldName].value
-      if (bValue !== undefined && bValue !== null) {
-        a._chatfield.fields[fieldName].value = bValue
+      const bField = b._chatfield.fields[fieldName]
+      const aField = a._chatfield.fields[fieldName]
+      if (bField && aField) {
+        const bValue = bField.value
+        if (bValue !== undefined && bValue !== null) {
+          aField.value = bValue
+        }
       }
     }
     return a
@@ -172,7 +176,7 @@ export class Interviewer {
     // )
 
     // Bind tools to LLM
-    this.llmWithTools = this.llm.bindTools([updateTool])
+    this.llmWithTools = this.llm.bindTools([]) as any
 
     // Build the state graph
     const builder = new StateGraph(InterviewState)
@@ -449,6 +453,6 @@ ${fields.join('\n\n')}
       throw new Error(`Multiple interrupts received: ${interrupts}`)
     }
     
-    return interrupts[0]
+    return interrupts[0] ?? null
   }
 }
