@@ -65,3 +65,7 @@ coverage/
 # Build outputs
 chatfield-js/dist/
 chatfield/dist/
+# Claude Code local settings
+settings.local.json
+
+/coverage.xml
