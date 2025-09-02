@@ -1,0 +1,120 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        /*
+        {
+            "name": "Debug run_real_api.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "chatfield.run_real_api",
+            "cwd": "${workspaceFolder}/chatfield",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/chatfield"
+            },
+            "envFile": "${workspaceFolder}/chatfield/.env",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        */
+        
+        /*
+        {
+            "name": "Debug run (Direct)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/chatfield/run_real_api.py",
+            "cwd": "${workspaceFolder}/chatfield",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/chatfield"
+            },
+            "envFile": "${workspaceFolder}/chatfield/.env",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        */
+
+        {
+            "name": "Debug run (Standalone)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/chatfield/restaurant_order.py", // Specify the script directly
+            // "program": "${file}", // Specify the script directly
+            "cwd": "${workspaceFolder}/chatfield",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/chatfield"
+            },
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: Module",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "enter-your-module-name",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: Attach",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "."
+                }
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "Pytest: All Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "${workspaceFolder}/chatfield/tests"
+            ],
+            "cwd": "${workspaceFolder}/chatfield",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/chatfield"
+            },
+            "envFile": "${workspaceFolder}/chatfield/.env",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Pytest: Specific Test (test_llm_initialization)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "${workspaceFolder}/chatfield/tests"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

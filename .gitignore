@@ -43,7 +43,6 @@ yarn-error.log*
 .eslintcache
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
