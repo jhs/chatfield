@@ -1,321 +1,122 @@
-# CLAUDE.md - Chatfield TypeScript/JavaScript Implementation Guide
+# CLAUDE.md
 
-## Overview
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Chatfield JS/TS is the TypeScript/JavaScript implementation of conversational data gathering powered by LLMs. It provides a clean API for transforming rigid forms into natural conversations, with full React integration and CopilotKit support.
+## CRITICAL: Primary Mission
+
+**The TypeScript implementation MUST stay synchronized with the Python implementation.** This means:
+- **Filenames**: Match Python's naming (e.g., `interview.py` → `interview.ts`, `test_builder.py` → `test_builder.ts`)
+- **Class/Function Names**: Keep identical names (e.g., `Interview`, `Interviewer`, `FieldProxy`)
+- **Method Names**: Preserve Python method names (e.g., `_name()`, `_pretty()`, `as_int`)
+- **Code Logic**: Implement the same algorithms and flows as Python
+- **Test Structure**: Mirror Python test files and test names
+- **Only deviate when necessary** for language-specific requirements (e.g., TypeScript types, async/await patterns)
+
+## Project Overview
+
+Chatfield JS/TS is the TypeScript/JavaScript implementation of conversational data gathering powered by LLMs. Package name: `@chatfield/core` (v0.1.0). This implementation maintains feature parity with the Python version (chatfield-py).
 
 ## Project Structure
 
 ```
 chatfield-js/
-├── package.json         # NPM package configuration (@chatfield/core v0.1.0)
-├── tsconfig.json        # TypeScript configuration
-├── jest.config.js       # Jest testing configuration
-├── README.md            # Package documentation
-├── src/
+├── src/                 # TypeScript source code
 │   ├── index.ts         # Main exports
-│   ├── decorators/      # Decorator-based API (primary)
-│   │   └── index.ts
-│   ├── core/            # Core classes and logic
-│   │   ├── types.ts     # Type definitions
-│   │   ├── metadata.ts  # Metadata management
-│   │   ├── gatherer.ts  # Main gatherer logic
-│   │   └── conversation.ts # Conversation state
-│   ├── backends/        # LLM provider integrations
-│   │   └── llm-backend.ts
-│   ├── builders/        # Builder pattern APIs (secondary)
-│   │   ├── gatherer-builder.ts
-│   │   └── schema-builder.ts
+│   ├── interview.ts     # Base Interview class with field discovery
+│   ├── interviewer.ts   # LangGraph-based conversation orchestration  
+│   ├── builder.ts       # Builder pattern API (primary interface)
+│   ├── decorators.ts    # Decorator implementations
+│   ├── field-proxy.ts   # FieldProxy string subclass for transformations
+│   ├── types.ts         # Core type definitions
 │   └── integrations/    # Framework integrations
 │       ├── react.ts     # React hooks and components
-│       ├── react-components.tsx # UI components
+│       ├── react-components.tsx # UI components  
 │       └── copilotkit.tsx # CopilotKit integration
+├── tests/               # Test suite (test_*.ts naming convention)
 ├── examples/            # Usage examples
-│   ├── basic-usage.ts
-│   ├── decorator-usage.ts
-│   ├── decorator-react.tsx
-│   └── schema-based.ts
-├── tests/               # Test suite
-│   ├── *.test.ts        # Unit and integration tests
-│   └── ...
-└── dist/                # Compiled output (generated)
+├── dist/                # Compiled output (generated)
+└── minimal.ts           # Minimal test script for OpenAI API
 ```
 
-## Core Architecture
-
-### API Design Philosophy
-
-Chatfield JS/TS provides multiple APIs to suit different preferences:
-
-1. **Builder API (Primary)** - Fluent, chainable interface
-2. **Decorator API** - Python-style decorators (secondary)
-3. **Schema API** - JSON-based configuration
-
-### Key Components
-
-#### 1. Core Types (`src/core/types.ts`)
-
-```typescript
-interface FieldMetaOptions {
-  name: string
-  description: string
-  mustRules?: string[]
-  rejectRules?: string[]
-  hint?: string
-  when?: (data: Record<string, string>) => boolean
-}
-
-interface GathererSchema {
-  fields: Record<string, FieldDefinition>
-  userContext?: string[]
-  agentContext?: string[]
-  docstring?: string
-}
-
-interface ConversationMessage {
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp?: Date
-}
-```
-
-#### 2. Builder API (`src/builders/gatherer-builder.ts`)
-
-Primary API for creating gatherers:
-
-```typescript
-const BusinessPlan = chatfield()
-  .field('concept', 'Your business concept')
-  .must('include timeline')
-  .hint('Be specific about milestones')
-  .field('market', 'Target market description')
-  .user('startup founder')
-  .agent('patient advisor')
-  .build()
-
-const result = await BusinessPlan.gather()
-```
-
-#### 3. LLM Backend Integration (`src/backends/llm-backend.ts`)
-
-```typescript
-abstract class LLMBackend {
-  abstract createConversationPrompt(meta: GathererMeta, field: FieldMeta, history: ConversationMessage[]): string
-  abstract getResponse(prompt: string): Promise<string>
-  abstract validateResponse(field: FieldMeta, response: string): Promise<ValidationResult>
-}
-
-class OpenAIBackend extends LLMBackend {
-  // OpenAI GPT integration with retry logic
-}
-
-class MockLLMBackend extends LLMBackend {
-  // Testing implementation
-}
-```
-
-#### 4. React Integration (`src/integrations/react.ts`)
-
-```typescript
-// React hooks for conversational forms
-export const useGatherer = (gatherer: GathererClass) => {
-  // Returns state, methods for React components
-}
-
-// React component wrapper
-export const GathererProvider = ({ children, gatherer }) => {
-  // Context provider for gatherer state
-}
-```
-
-#### 5. CopilotKit Integration (`src/integrations/copilotkit.tsx`)
-
-```typescript
-export const ChatfieldSidebar = ({ gatherer, onComplete }) => {
-  // CopilotKit sidebar component for conversational data gathering
-}
-```
-
-## Development Workflow
-
-### Package Configuration
-
-- **Package Name**: `@chatfield/core`
-- **Version**: `0.1.0`
-- **Main Entry**: `dist/index.js`
-- **Types**: `dist/index.d.ts`
-- **License**: Apache-2.0
-
-### Build System
-
-- **TypeScript**: Compiles to `dist/` directory
-- **Target**: ES2020, CommonJS modules
-- **Declaration files**: Generated for TypeScript consumers
-
-### Testing Strategy
-
-- **Jest**: Test runner with TypeScript support
-- **Coverage**: Unit tests for all core components
-- **Integration tests**: Real LLM testing (marked as slow)
-- **Mock implementations**: Fast unit testing
-
-### Development Commands
+## Development Commands
 
 ```bash
-# Development
-npm run dev          # TypeScript watch mode
-npm run build        # Compile to dist/
-npm run clean        # Remove dist/
+# Build & Development
+npm run build         # Compile TypeScript to dist/
+npm run dev           # Watch mode compilation
+npm run clean         # Remove dist/ directory
 
-# Testing  
-npm test             # Run Jest test suite
-npm run test:watch   # Watch mode testing
+# Testing
+npm test              # Run Jest test suite  
+npm run test:watch    # Watch mode testing
 
-# Quality
-npm run lint         # ESLint checks
+# Code Quality  
+npm run lint          # ESLint checks
+
+# Running Examples
+npm run min           # Run minimal.ts example (tests OpenAI API)
+npx tsx examples/basic-usage.ts  # Run any example directly
 ```
 
-## Key Implementation Details
+## Architecture
 
-### Field Validation
+### Core Concepts
 
-Validation is handled through LLM prompts rather than code:
+1. **Interview Class**: Base class that defines fields to collect via methods
+2. **Interviewer**: Orchestrates conversation flow using LangGraph and OpenAI
+3. **Builder API**: Fluent interface for configuring gatherers (primary API)
+4. **FieldProxy**: String subclass providing transformation access (e.g., `field.as_int`)
+5. **Decorators**: Alternative API for field configuration
 
-```typescript
-const validationPrompt = `
-The user provided: "${response}"
+### Key Dependencies
 
-For field "${field.description}", validate that the answer:
-${field.mustRules?.map(rule => `- MUST include: ${rule}`).join('\n')}
-${field.rejectRules?.map(rule => `- MUST NOT include: ${rule}`).join('\n')}
+- `@langchain/core`, `@langchain/langgraph`: Conversation orchestration
+- `openai`: LLM provider integration
+- `reflect-metadata`: Decorator support
+- `uuid`: Thread ID generation
 
-Respond "VALID" if valid, otherwise explain what's wrong.
-`
+### Testing Configuration
+
+- Jest with ts-jest preset for TypeScript support
+- Test files use `test_*.ts` naming convention  
+- Located in `tests/` directory
+- Uses `tsconfig.test.json` for test compilation
+
+### Build Configuration
+
+- TypeScript compiles to `dist/` directory
+- Target: ES2020, CommonJS modules
+- Strict mode enabled with all checks
+- Decorator support enabled
+- React integrations excluded from main build
+
+## Current Development Focus
+
+Based on README.md short term plan:
+1. Interrupt system to get user input (see minimal.ts readline implementation)
+2. Tool calling functionality
+3. Field decorators and transformations (alice/bob traits, casts)
+
+When implementing new features, ALWAYS check the Python implementation first in `chatfield-py/` to ensure consistency in naming, structure, and behavior.
+
+## API Key Configuration
+
+Requires OpenAI API key:
+```bash
+export OPENAI_API_KEY=your-api-key
 ```
+Or use `.env` file in parent directory.
 
-### Conversation Flow
+## Testing Approach
 
-1. Initialize gatherer with schema/configuration
-2. Determine next field to collect based on conditions
-3. Generate conversational prompt with context
-4. Get LLM response and validate against rules
-5. Handle invalid responses with helpful feedback
-6. Store valid data and continue until complete
+- Unit tests for individual components
+- Integration tests with mock LLM backends
+- Test files follow `test_*.ts` naming pattern
+- Run single test: `npm test -- test_interview.ts`
 
-### Framework Integrations
+## Important Notes
 
-#### React Integration
-
-- `useGatherer` hook for state management
-- `GathererProvider` for context
-- Form components that render as conversations
-- Real-time validation and feedback
-
-#### CopilotKit Integration
-
-- Sidebar component for conversational UI
-- Integration with CopilotKit's chat interface
-- Streaming responses and progressive disclosure
-- Context-aware suggestions
-
-## Usage Patterns
-
-### Basic Builder Pattern
-
-```typescript
-import { chatfield } from '@chatfield/core'
-
-const ContactForm = chatfield()
-  .field('name', 'Your full name')
-  .field('email', 'Your email address')
-  .must('valid email format')
-  .field('message', 'Your message')
-  .hint('Be specific about your needs')
-  .build()
-
-const data = await ContactForm.gather()
-```
-
-### React Component
-
-```tsx
-import { useGatherer, GathererProvider } from '@chatfield/core/integrations/react'
-
-export function ContactPage() {
-  const { isComplete, data, currentQuestion } = useGatherer(ContactForm)
-  
-  return (
-    <GathererProvider gatherer={ContactForm}>
-      {isComplete ? (
-        <Results data={data} />
-      ) : (
-        <ConversationUI question={currentQuestion} />
-      )}
-    </GathererProvider>
-  )
-}
-```
-
-### CopilotKit Integration
-
-```tsx
-import { ChatfieldSidebar } from '@chatfield/core/integrations/copilotkit'
-
-export function App() {
-  return (
-    <CopilotKit>
-      <div className="flex">
-        <main>Your app content</main>
-        <ChatfieldSidebar 
-          gatherer={ContactForm}
-          onComplete={(data) => console.log('Gathered:', data)}
-        />
-      </div>
-    </CopilotKit>
-  )
-}
-```
-
-## Dependencies
-
-### Runtime Dependencies
-- `openai`: ^4.70.0 - OpenAI API integration
-- `reflect-metadata`: ^0.1.13 - Decorator support
-
-### Development Dependencies
-- `typescript`: ^5.0.0 - TypeScript compiler
-- `jest`: ^29.0.0 - Testing framework
-- `@types/*`: Type definitions
-- `eslint`: Code linting
-- `@typescript-eslint/*`: TypeScript-specific linting
-
-### Peer Dependencies
-- `react`: ^18.0.0 || ^19.0.0 (optional) - React integration
-
-## Testing Configuration
-
-Jest configuration supports:
-- TypeScript compilation via `ts-jest`
-- ES modules and decorators
-- Coverage reporting
-- Async/await testing patterns
-- Mock LLM backends for fast testing
-
-## Future Enhancements
-
-- Multiple LLM provider support (Anthropic, local models)
-- Voice input/output integration
-- Advanced conversation state management
-- Conversation save/resume functionality
-- Integration with more UI frameworks (Vue, Svelte)
-- Advanced validation patterns
-- Conditional field logic improvements
-
-## Integration Notes
-
-This package is designed to work seamlessly with:
-- **React applications**: Hooks and component patterns
-- **CopilotKit**: Conversational AI interfaces
-- **Next.js**: Full-stack React applications
-- **Node.js backends**: Server-side data gathering
-- **TypeScript projects**: Full type safety and IntelliSense
+- The project structure differs from the documentation - actual implementation is flat in `src/` not nested in `core/`
+- Primary API is the builder pattern in `builder.ts`
+- LangSmith trace URLs are generated for debugging (see minimal.ts:78)
+- React/CopilotKit integrations are optional peer dependencies
