@@ -311,18 +311,18 @@ class Interview:
 
 
 class FieldProxy(str):
-    """Proxy object that provides match attribute access to field values.
+    """Proxy object that provides transformation attribute access to field values.
     
     This proxy allows field values to:
     1. Behave as a normal string with all string methods
-    2. Access match rule evaluations via attributes (e.g., field.is_personal)
+    2. Access boolean evaluations via as_bool.* attributes (e.g., field.as_bool_is_personal)
     3. Access type transformations via as_* attributes (e.g., field.as_int)
     
     Example:
         field = FieldValueProxy("100 dollars", chatfield)
         field == "100 dollars"  # Direct string comparison
         field.upper() == "100 DOLLARS"  # String methods work
-        field.is_large == True  # Match evaluation
+        field.as_bool_is_large == True  # Boolean evaluation
         field.as_int == 100  # Type transformation
     """
     
@@ -331,7 +331,7 @@ class FieldProxy(str):
         
         Args:
             value: The actual string value of the field
-            chatfield: Metadata about the field including match rules
+            chatfield: Metadata about the field including transformations
         """
         # Create the string instance with the value
         instance = str.__new__(cls, value)
@@ -344,7 +344,7 @@ class FieldProxy(str):
         
         Args:
             value: The actual string value of the field (for compatibility)
-            chatfield: Metadata about the field including match rules
+            chatfield: Metadata about the field including transformations
         """
 
         # Don't call str.__init__ as it doesn't take arguments
@@ -364,11 +364,10 @@ class FieldProxy(str):
         return '\n'.join(lines)
     
     def __getattr__(self, attr_name: str):
-        """Provide access to match rule evaluations and type transformations.
+        """Provide access to type transformations and boolean evaluations.
         
         Args:
-            attr_name: The name of the match rule (e.g., 'is_personal') or 
-                transformation (e.g., 'as_int')
+            attr_name: The name of the transformation (e.g., 'as_int', 'as_bool_is_personal')
             
         Returns:
             The evaluation/transformation result, or None if not evaluated
@@ -382,7 +381,7 @@ class FieldProxy(str):
             raise AttributeError(f"Field {attr_name} has no value set. Cannot access attributes.")
 
         if attr_name in llm_value:
-            # If the attribute is a match rule, return its evaluation
+            # Return the transformation or evaluation result
             cast_value = llm_value[attr_name]
             return cast_value
 

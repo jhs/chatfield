@@ -67,16 +67,7 @@ def dialogue_to_msgpack_dict(dialogue: Interview) -> Dict[str, Any]:
                 for rule in field_func._chatfield_reject_rules:
                     decorators.append({"type": "reject", "value": rule})
             
-            # Match rules (custom matches like @match.is_personal)
-            if hasattr(field_func, '_chatfield_match_rules'):
-                for match_name, match_data in field_func._chatfield_match_rules.items():
-                    # Skip internal must/reject rules as they're handled above
-                    if not match_name.startswith('_must_') and not match_name.startswith('_reject_'):
-                        decorators.append({
-                            "type": "match",
-                            "name": match_name,
-                            "criteria": match_data.get('criteria', '')
-                        })
+            # Note: Match functionality removed - use @as_bool instead
             
             # Type transformations (@as_int, @as_float, etc.)
             if hasattr(field_func, '_chatfield_transformations'):
@@ -192,7 +183,7 @@ def _recreate_dialogue_class(data: Dict[str, Any]) -> Type[Interview]:
     Returns:
         A dynamically created Interview class with all decorators applied
     """
-    from . import decorators, match, types
+    from . import decorators
     
     # Create class attributes dictionary
     class_attrs = {}
@@ -230,14 +221,13 @@ def _recreate_dialogue_class(data: Dict[str, Any]) -> Type[Interview]:
             elif dec_type == "reject":
                 field_func = decorators.reject(decorator_def["value"])(field_func)
             elif dec_type == "match":
-                # Use the match decorator dynamically
-                match_decorator = getattr(match.match, decorator_def["name"])
-                field_func = match_decorator(decorator_def["criteria"])(field_func)
+                # Match functionality removed - use @as_bool instead
+                pass
             elif dec_type == "transformation":
                 trans_name = decorator_def["name"]
                 # Find the right transformation decorator
-                if hasattr(types, trans_name):
-                    trans_decorator = getattr(types, trans_name)
+                if hasattr(decorators, trans_name):
+                    trans_decorator = getattr(decorators, trans_name)
                     # Handle decorators that take arguments
                     if trans_name == "as_list" and "item_type" in decorator_def:
                         # For now, we'll use Any as the type since we can't reconstruct the actual type
