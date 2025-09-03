@@ -3,7 +3,7 @@
  * Mirrors Python's test_builder.py
  */
 
-import { chatfield } from '../src/builders/gatherer-builder'
+import { chatfield } from '../src/builder'
 
 describe('TestBasicBuilder', () => {
   test('test_simple_interview', () => {
@@ -256,6 +256,7 @@ describe('TestFieldTransformations', () => {
       expect(colorCast.null).toBe(false)
       expect(colorCast.multi).toBe(false)
     }
+  })
 })
 
 describe('TestSpecialFields', () => {
