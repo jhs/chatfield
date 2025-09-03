@@ -15,7 +15,19 @@ export {
 } from './field-proxy'
 
 // Builder API - mirroring Python  
-export { chatfield } from './builder'
+export { 
+  chatfield,
+  patientGatherer,
+  quickGatherer,
+  expertGatherer,
+  // Builder classes (for type annotations if needed)
+  ChatfieldBuilder,
+  FieldBuilder,
+  RoleBuilder,
+  TraitBuilder,
+  CastBuilder,
+  ChoiceBuilder
+} from './builder'
 
 // Decorators - mirroring Python
 export { 
