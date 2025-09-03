@@ -83,3 +83,19 @@ class FieldProxy(str):
         raise AttributeError(f"Field {attr_name} has no value set")
 
 
+def create_field_proxy(value: str, metadata: Dict[str, Any]) -> FieldProxy:
+    """Create a FieldProxy that acts like a string but has transformation properties.
+    
+    This factory function mirrors the TypeScript implementation for consistency,
+    even though Python could directly instantiate the class.
+    
+    Args:
+        value: The string value
+        metadata: Field metadata including transformations
+        
+    Returns:
+        A FieldProxy instance
+    """
+    return FieldProxy(value, metadata)
+
+

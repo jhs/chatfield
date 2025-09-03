@@ -9,7 +9,7 @@ from .builder import chatfield
 
 from .interview import Interview
 from .interviewer import Interviewer
-from .field_proxy import FieldProxy
+from .field_proxy import FieldProxy, create_field_proxy
 
 from .decorators import alice, bob
 from .decorators import must, reject, hint

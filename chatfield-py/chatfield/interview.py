@@ -8,7 +8,7 @@ import traceback
 from typing import Type, TypeVar, List, Dict, Any, Callable
 from types import SimpleNamespace
 
-from .field_proxy import FieldProxy
+from .field_proxy import FieldProxy, create_field_proxy
 
 T = TypeVar('T', bound='Interview')
 
@@ -261,7 +261,7 @@ class Interview:
         
         # print(f'Valid field {name!r}: {llm_value!r}')
         primary_value = llm_value['value']
-        proxy = FieldProxy(primary_value, chatfield)
+        proxy = create_field_proxy(primary_value, chatfield)
         return proxy
     
     def _pretty(self) -> str:
