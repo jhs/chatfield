@@ -3,7 +3,7 @@
  * Mirrors Python's interview.py
  */
 
-import { FieldProxy } from './field-proxy'
+import { createFieldProxy } from './field-proxy'
 
 /**
  * Main Interview class that holds collected data
@@ -165,7 +165,7 @@ export class Interview {
     if (name in this._chatfield.fields) {
       const field = this._chatfield.fields[name]
       if (field.value && field.value.value) {
-        return new FieldProxy(field.value.value, field)
+        return createFieldProxy(field.value.value, field)
       }
       return null
     }

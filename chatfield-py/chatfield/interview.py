@@ -8,6 +8,8 @@ import traceback
 from typing import Type, TypeVar, List, Dict, Any, Callable
 from types import SimpleNamespace
 
+from .field_proxy import FieldProxy
+
 T = TypeVar('T', bound='Interview')
 
 # class Interview(BaseModel):
@@ -310,79 +312,3 @@ class Interview:
         return True
 
 
-class FieldProxy(str):
-    """Proxy object that provides transformation attribute access to field values.
-    
-    This proxy allows field values to:
-    1. Behave as a normal string with all string methods
-    2. Access boolean evaluations via as_bool.* attributes (e.g., field.as_bool_is_personal)
-    3. Access type transformations via as_* attributes (e.g., field.as_int)
-    
-    Example:
-        field = FieldValueProxy("100 dollars", chatfield)
-        field == "100 dollars"  # Direct string comparison
-        field.upper() == "100 DOLLARS"  # String methods work
-        field.as_bool_is_large == True  # Boolean evaluation
-        field.as_int == 100  # Type transformation
-    """
-    
-    def __new__(cls, value: str, chatfield: Dict[str, Any]):
-        """Create a new string-based proxy instance.
-        
-        Args:
-            value: The actual string value of the field
-            chatfield: Metadata about the field including transformations
-        """
-        # Create the string instance with the value
-        instance = str.__new__(cls, value)
-        return instance
-    
-    def __init__(self, value: str, chatfield: Dict[str, Any]):
-        """Initialize the field value proxy metadata.
-        
-        Note: The string value is already set in __new__, this just stores metadata.
-        
-        Args:
-            value: The actual string value of the field (for compatibility)
-            chatfield: Metadata about the field including transformations
-        """
-
-        # Don't call str.__init__ as it doesn't take arguments
-        # Store metadata for the proxy functionality
-        self._chatfield = chatfield
-    
-    def _pretty(self) -> str:
-        """Return a representation of the proxy."""
-        # Use self directly since we're now a string
-        # limit = 100
-        # value_preview = self[:limit] + '...' if len(self) > limit else self
-        # lines = [value_preview]
-        lines = []
-        for key, val in self._chatfield['value'].items():
-            if key != 'value':
-                lines.append(f'    {key:<25}: {val!r}')
-        return '\n'.join(lines)
-    
-    def __getattr__(self, attr_name: str):
-        """Provide access to type transformations and boolean evaluations.
-        
-        Args:
-            attr_name: The name of the transformation (e.g., 'as_int', 'as_bool_is_personal')
-            
-        Returns:
-            The evaluation/transformation result, or None if not evaluated
-            
-        Raises:
-            AttributeError: If the attribute doesn't exist
-        """
-        # print(f'FieldProxy: __getattr__ {attr_name!r} for {self._chatfield!r}')
-        llm_value = self._chatfield.get('value')
-        if not llm_value or not isinstance(llm_value, dict):
-            raise AttributeError(f"Field {attr_name} has no value set. Cannot access attributes.")
-
-        if attr_name in llm_value:
-            # Return the transformation or evaluation result
-            cast_value = llm_value[attr_name]
-            return cast_value
-
-        raise AttributeError(f"Field {attr_name} has no value set")

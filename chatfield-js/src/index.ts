@@ -7,6 +7,12 @@
 // Core classes - mirroring Python
 export { Interview } from './interview'
 export { Interviewer } from './interviewer'
+export { 
+  createFieldProxy,  // Required for TypeScript Proxy creation
+  type FieldProxy,
+  type FieldTransformations,
+  type FieldMetadata
+} from './field-proxy'
 
 // Builder API - mirroring Python  
 export { chatfield } from './builder'
