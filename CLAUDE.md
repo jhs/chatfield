@@ -178,3 +178,4 @@ Both implementations use LLM-powered validation rather than code-based rules:
 - API rate limits should be considered for production use
 - Thread safety handled via separate Interviewer instances
 - Always use `python` to run Python commands, not python3, etc. because the .venv is always active and is used via python, pip, etc.
+- We do not run any test suite stuff right now because it is broken for unrelated reasons
