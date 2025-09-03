@@ -1,29 +1,46 @@
 /**
  * Chatfield: Conversational data gathering powered by LLMs
  * TypeScript/JavaScript implementation
+ * Mirrors Python's __init__.py structure
  */
 
-// Primary decorator API
-export { gather, field, must, reject, hint, user, agent } from './decorators'
-export type { GathererClass } from './decorators'
+// Core classes - mirroring Python
+export { Interview } from './interview'
+export { Interviewer } from './interviewer'
 
-// Core classes and types
-export { FieldMeta, GathererMeta } from './core/metadata'
-export { Gatherer, GathererInstance } from './core/gatherer'
+// Builder API - mirroring Python  
+export { chatfield } from './builder'
 
-// Alternative builder API (secondary)
-export { chatfield } from './builders/gatherer-builder'
-export { createGatherer, schemaPresets } from './builders/schema-builder'
+// Decorators - mirroring Python
+export { 
+  alice, 
+  bob,
+  must, 
+  reject, 
+  hint,
+  // Type transformations (will be added later)
+  // as_int, as_float, as_bool, as_str, as_list, as_dict, as_set, as_obj,
+  // as_lang, as_percent,
+  // as_any, as_one, as_maybe, as_multi
+} from './decorators'
 
-// Note: React integration available but not exported by default
-// Import from '@chatfield/core/integrations/react' directly if needed
+// Metadata classes
+export { InterviewMeta, FieldMeta } from './interview'
 
-// Re-export types
+// Types
 export type {
   FieldMetaOptions,
-  GathererSchema,
+  InterviewSchema,
   ConversationMessage,
   ValidationResult,
   CollectedData,
-  GathererOptions
-} from './core/types'
+  InterviewOptions
+} from './types'
+
+// Backwards compatibility exports (deprecated)
+export { Interview as Gatherer } from './interview'
+export { Interview as GathererInstance } from './interview'
+export { InterviewMeta as GathererMeta } from './metadata'
+export type { InterviewSchema as GathererSchema } from './types'
+export type { InterviewOptions as GathererOptions } from './types'
+export { alice as agent, bob as user } from './decorators'

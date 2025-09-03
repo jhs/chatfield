@@ -11,7 +11,7 @@ export interface FieldMetaOptions {
   when?: (data: Record<string, string>) => boolean
 }
 
-export interface GathererSchema {
+export interface InterviewSchema {
   fields: Record<string, {
     description: string
     must?: string[]
@@ -35,7 +35,7 @@ export interface ValidationResult {
   feedback: string
 }
 
-export interface GathererOptions {
+export interface InterviewOptions {
   maxRetryAttempts?: number
 }
 

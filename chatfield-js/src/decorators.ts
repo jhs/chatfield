@@ -3,8 +3,8 @@
  */
 
 import 'reflect-metadata'
-import { GathererMeta, FieldMeta } from '../core/metadata'
-import { Gatherer, GathererInstance } from '../core/gatherer'
+import { InterviewMeta, FieldMeta } from './interview'
+import { Interview } from './interview'
 // TODO: Replace with Interviewer from interviewer.ts
 
 // Metadata keys for storing decorator information
@@ -116,45 +116,49 @@ export function hint(tooltip: string) {
 }
 
 /**
- * Add information about the user
+ * Add information about bob (the user)
  */
-export function user(context: string) {
+export function bob(roleType: string) {
   return function <T extends { new(...args: any[]): {} }>(constructor: T): T {
     if (!constructor.prototype[CHATFIELD_USER_CONTEXT]) {
       constructor.prototype[CHATFIELD_USER_CONTEXT] = []
     }
-    constructor.prototype[CHATFIELD_USER_CONTEXT].push(context)
+    constructor.prototype[CHATFIELD_USER_CONTEXT].push(roleType)
     return constructor
   }
 }
 
 /**
- * Define how the agent should behave
+ * Define how alice (the agent) should behave
  */
-export function agent(behavior: string) {
+export function alice(roleType: string) {
   return function <T extends { new(...args: any[]): {} }>(constructor: T): T {
     if (!constructor.prototype[CHATFIELD_AGENT_CONTEXT]) {
       constructor.prototype[CHATFIELD_AGENT_CONTEXT] = []
     }
-    constructor.prototype[CHATFIELD_AGENT_CONTEXT].push(behavior)
+    constructor.prototype[CHATFIELD_AGENT_CONTEXT].push(roleType)
     return constructor
   }
 }
 
+// Aliases for backwards compatibility
+export const user = bob
+export const agent = alice
+
 /**
  * Transform a class into a conversational gatherer
  */
-export function gather<T extends { new(...args: any[]): {} }>(constructor: T): T & GathererClass {
+export function interview<T extends { new(...args: any[]): {} }>(constructor: T): T & InterviewClass {
   // Process the class to extract metadata
-  const meta = processGathererClass(constructor)
+  const meta = processInterviewClass(constructor)
   
   // Create new class that extends the original
-  class GatheredClass extends constructor {
-    static async gather(): Promise<GathererInstance> {
+  class InterviewedClass extends constructor {
+    static async gather(): Promise<Interview> {
       // TODO: Replace with Interviewer implementation
-      console.warn('Decorator gather() needs refactoring to use Interviewer')
+      console.warn('Decorator interview() needs refactoring to use Interviewer')
       const collectedData = {} // Temporary stub
-      return new GathererInstance(meta, collectedData)
+      return new Interview(meta, collectedData)
     }
     
     static _chatfield_meta = meta
@@ -178,8 +182,8 @@ export function gather<T extends { new(...args: any[]): {} }>(constructor: T): T
 /**
  * Extract all metadata from a decorated class (mirrors Python implementation)
  */
-function processGathererClass(cls: any): GathererMeta {
-  const meta = new GathererMeta()
+function processInterviewClass(cls: any): InterviewMeta {
+  const meta = new InterviewMeta()
   
   // Get docstring from class name
   if (cls.name) {
@@ -213,15 +217,19 @@ function processGathererClass(cls: any): GathererMeta {
 }
 
 /**
- * Helper type for gatherer classes
+ * Helper type for interview classes
  */
-export interface GathererClass {
-  gather(): Promise<GathererInstance>
+export interface InterviewClass {
+  gather(): Promise<Interview>
   getFieldPreview(): Array<{
     name: string
     description: string
     hasValidation: boolean
     hint?: string
   }>
-  _chatfield_meta: GathererMeta
+  _chatfield_meta: InterviewMeta
 }
+
+// Alias for backwards compatibility
+export const gather = interview
+export type GathererClass = InterviewClass
