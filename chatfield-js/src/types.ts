@@ -8,7 +8,6 @@ export interface FieldMetaOptions {
   mustRules?: string[]
   rejectRules?: string[]
   hint?: string
-  when?: (data: Record<string, string>) => boolean
 }
 
 export interface InterviewSchema {
@@ -17,7 +16,6 @@ export interface InterviewSchema {
     must?: string[]
     reject?: string[]
     hint?: string
-    when?: (data: Record<string, string>) => boolean
   }>
   userContext?: string[]
   agentContext?: string[]

@@ -219,15 +219,6 @@ class FieldBuilder:
         self._chatfield_field['specs']['confidential'] = True  # Implied
         return self
     
-    def optional(self):
-        """Mark field as optional (future feature)."""
-        # TODO: Implement optional field handling
-        return self
-    
-    def when(self, condition):
-        """Set conditional visibility (future feature)."""
-        # TODO: Implement conditional field logic
-        return self
     
     def field(self, name: str):
         """Start defining a new field."""

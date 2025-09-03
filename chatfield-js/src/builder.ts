@@ -43,13 +43,6 @@ export class FieldBuilder {
     return this
   }
 
-  /**
-   * Set conditional visibility logic
-   */
-  when(condition: (data: Record<string, string>) => boolean): FieldBuilder {
-    this.fieldMeta.setWhenCondition(condition)
-    return this
-  }
 
   /**
    * Add another field
@@ -184,10 +177,6 @@ export function createInterview(schema: InterviewSchema, options?: InterviewOpti
       fieldMeta.setHint(fieldConfig.hint)
     }
 
-    // Add conditional logic
-    if (fieldConfig.when) {
-      fieldMeta.setWhenCondition(fieldConfig.when)
-    }
   })
 
   return new Interview(meta, options)

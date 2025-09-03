@@ -36,7 +36,6 @@ const BusinessPlan = chatfield()
   
   .field('solution', 'How does your product/service solve this problem?')
   .must('explain unique approach')
-  .when(data => data.concept && data.problem) // Only ask if previous fields completed
   
   .field('market', 'Who is your target market?')
   .must('specific demographics or market segment')
@@ -48,7 +47,6 @@ const BusinessPlan = chatfield()
   
   .field('advantage', 'What is your competitive advantage?')
   .must('unique differentiator')
-  .when(data => data.competition) // Only ask after competition is known
   
   .field('revenue', 'How will you make money?')
   .must('specific revenue model')
@@ -56,7 +54,6 @@ const BusinessPlan = chatfield()
   
   .field('funding', 'How much funding do you need to get started?')
   .must('specific amount and time period')
-  .when(data => data.revenue) // Only ask after revenue model is clear
   
   .build()
 
@@ -93,7 +90,6 @@ const BugReport = chatfield()
   .hint('OS version, browser, device type, etc.')
   
   .field('workaround', 'Have you found any workarounds?')
-  .when(data => data.frequency && !data.frequency.toLowerCase().includes('always'))
   .hint('Any temporary solutions or ways to avoid the problem?')
   
   .build()
@@ -116,7 +112,6 @@ const UserFeedback = chatfield()
   .hint('Pain points, confusing features, missing functionality')
   
   .field('suggestions', 'Do you have any specific suggestions?')
-  .when(data => data.dislikes) // Only ask if they mentioned things to improve
   .hint('New features, changes, or improvements you\'d like to see')
   
   .field('use_case', 'How do you primarily use the product?')

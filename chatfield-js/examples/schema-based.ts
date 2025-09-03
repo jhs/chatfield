@@ -50,7 +50,6 @@ const JobApplicationSchema: GathererSchema = {
     salary: {
       description: "What are your salary expectations?",
       must: ["specific range or number"],
-      when: (data) => data.position && !data.position.toLowerCase().includes("intern"),
       hint: "Research market rates for this role in your location"
     },
     availability: {
@@ -106,15 +105,10 @@ const EventPlanningSchema: GathererSchema = {
     },
     catering: {
       description: "What food and drink arrangements do you want?",
-      when: (data) => parseInt(data.attendees || "0") > 5,
       hint: "Full meal, appetizers, drinks only, dietary restrictions, etc."
     },
     entertainment: {
       description: "What entertainment or activities will you have?",
-      when: (data) => {
-        const type = data.event_type?.toLowerCase() || ""
-        return type.includes("party") || type.includes("wedding") || type.includes("celebration")
-      },
       hint: "Music, DJ, games, speakers, special activities"
     },
     special_requirements: {
@@ -161,10 +155,6 @@ const CustomerOnboardingSchema: GathererSchema = {
     },
     integration: {
       description: "What other tools do you need this to integrate with?",
-      when: (data) => {
-        const role = data.role?.toLowerCase() || ""
-        return role.includes("tech") || role.includes("it") || role.includes("engineer")
-      },
       hint: "CRM, email marketing, analytics, databases, etc."
     },
     team_size: {
@@ -174,12 +164,10 @@ const CustomerOnboardingSchema: GathererSchema = {
     },
     support: {
       description: "What level of support would you like?",
-      when: (data) => parseInt(data.company_size || "0") > 50,
       hint: "Self-service, email support, phone support, dedicated account manager"
     },
     training: {
       description: "Would you like training for your team?",
-      when: (data) => parseInt(data.team_size || "0") > 3,
       hint: "Online tutorials, live training sessions, documentation"
     }
   }

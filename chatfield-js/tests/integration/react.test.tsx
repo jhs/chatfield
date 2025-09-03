@@ -67,11 +67,10 @@ describe('React Integration Tests', () => {
       expect(result.current.data.email).toBeUndefined()
     })
 
-    test('should handle conditional fields', async () => {
+    test('should handle all fields', async () => {
       const gatherer = chatfield()
         .field('hasJob', 'Are you employed?')
         .field('jobTitle', 'Your job title')
-        .when(data => data.hasJob === 'yes')
         .build({ llmBackend: mockLLM })
 
       const { result } = renderHook(() => useGatherer(gatherer))
@@ -79,13 +78,19 @@ describe('React Integration Tests', () => {
       // Initially should ask about employment
       expect(result.current.currentField).toBe('hasJob')
 
-      // Answer no - should complete without asking job title
+      // Answer and move to next field
       await act(async () => {
-        await result.current.submitResponse('no')
+        await result.current.submitResponse('yes')
       })
 
+      expect(result.current.currentField).toBe('jobTitle')
+      
+      await act(async () => {
+        await result.current.submitResponse('Software Engineer')
+      })
+      
       expect(result.current.isComplete).toBe(true)
-      expect(result.current.data.jobTitle).toBeUndefined()
+      expect(result.current.data.jobTitle).toBe('Software Engineer')
     })
   })
 

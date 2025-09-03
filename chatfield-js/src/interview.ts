@@ -221,7 +221,6 @@ export class FieldMeta {
   mustRules: string[] = []
   rejectRules: string[] = []
   hint?: string
-  whenCondition?: (data: Record<string, string>) => boolean
 
   constructor(name: string, description: string) {
     this.name = name
@@ -240,9 +239,6 @@ export class FieldMeta {
     this.hint = hint
   }
 
-  setWhenCondition(condition: (data: Record<string, string>) => boolean): void {
-    this.whenCondition = condition
-  }
 
   hasValidationRules(): boolean {
     return this.mustRules.length > 0 || this.rejectRules.length > 0

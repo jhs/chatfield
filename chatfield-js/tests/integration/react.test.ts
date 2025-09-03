@@ -28,7 +28,6 @@ describe('Chatfield Integration Tests', () => {
       .field('problem', 'What problem does it solve?')
       .must('specific problem statement')
       .field('revenue', 'How will you make money?')
-      .when(data => data.concept && data.problem)
       .build({ llmBackend: mockLLM })
 
     // Simulate the conversation manually since we don't have UI integration yet
@@ -49,7 +48,7 @@ describe('Chatfield Integration Tests', () => {
     result = await conversation.processUserResponse('Small businesses struggle with accurate inventory tracking leading to stockouts and overstock situations')
     expect(result.success).toBe(true)
     
-    // Process conditional third field (should be visible now)
+    // Process third field
     const nextField = conversation.getNextField()
     expect(nextField?.name).toBe('revenue')
     
@@ -171,15 +170,12 @@ describe('Chatfield Integration Tests', () => {
     expect(instance.toString()).toContain('age=\'30\'')
   })
 
-  test('should handle complex conditional logic', async () => {
+  test('should handle all fields sequentially', async () => {
     const gatherer = chatfield()
       .field('hasJob', 'Are you currently employed?')
       .field('jobTitle', 'What is your job title?')
-      .when(data => data.hasJob === 'yes')
       .field('employer', 'Who do you work for?')
-      .when(data => data.hasJob === 'yes')
       .field('lookingFor', 'What type of work are you looking for?')
-      .when(data => data.hasJob === 'no')
       .build({ llmBackend: mockLLM })
 
     const conversation = new Conversation(gatherer.getMeta(), { llmBackend: mockLLM })
@@ -187,7 +183,7 @@ describe('Chatfield Integration Tests', () => {
     // Start with employment status
     await conversation.processUserResponse('yes')
     
-    // Should now ask about job-related fields
+    // Should ask all fields in sequence
     let nextField = conversation.getNextField()
     expect(nextField?.name).toBe('jobTitle')
     
