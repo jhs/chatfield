@@ -77,8 +77,8 @@ function mergeInterviews(a: Interview, b: Interview): Interview {
   if (a && b) {
     // Copy over any new field values from b to a
     for (const fieldName of Object.keys(b._chatfield.fields)) {
-      const bValue = b._chatfield.fields[fieldName].value
-      if (bValue !== undefined && bValue !== null) {
+      const bValue = b._chatfield.fields[fieldName]?.value
+      if (bValue !== undefined && bValue !== null && a._chatfield.fields[fieldName]) {
         a._chatfield.fields[fieldName].value = bValue
       }
     }
@@ -145,34 +145,34 @@ export class Interviewer {
     const toolSchema = z.object(fieldSchemas)
 
     // Create the tool with simplified schema
-    // const updateTool = tool(
-    //   async (args: any) => {
-    //     console.log('Tool called with:', args)
+    const updateTool = tool(
+      async (args: any) => {
+        console.log('Tool called with:', args)
         
-    //     try {
-    //       // Process the tool input
-    //       for (const [fieldName, fieldValue] of Object.entries(args)) {
-    //         if (fieldValue && typeof fieldValue === 'object') {
-    //           console.log(`Setting field ${fieldName}:`, fieldValue)
-    //           if (this.interview._chatfield.fields[fieldName]) {
-    //             this.interview._chatfield.fields[fieldName].value = fieldValue
-    //           }
-    //         }
-    //       }
-    //       return 'Success'
-    //     } catch (error: any) {
-    //       return `Error: ${error.message}`
-    //     }
-    //   },
-    //   {
-    //     name: this.toolName,
-    //     description: toolDescription,
-    //     schema: z.record(z.any()) // Simplified schema to avoid deep instantiation
-    //   }
-    // )
+        try {
+          // Process the tool input
+          for (const [fieldName, fieldValue] of Object.entries(args)) {
+            if (fieldValue && typeof fieldValue === 'object') {
+              console.log(`Setting field ${fieldName}:`, fieldValue)
+              if (this.interview._chatfield.fields[fieldName]) {
+                this.interview._chatfield.fields[fieldName].value = fieldValue
+              }
+            }
+          }
+          return 'Success'
+        } catch (error: any) {
+          return `Error: ${error.message}`
+        }
+      },
+      {
+        name: this.toolName,
+        description: toolDescription,
+        schema: z.record(z.any()) // Simplified schema to avoid deep instantiation
+      }
+    )
 
     // Bind tools to LLM
-    this.llmWithTools = this.llm.bindTools([updateTool])
+    this.llmWithTools = this.llm.bindTools([updateTool]) as ChatOpenAI
 
     // Build the state graph
     const builder = new StateGraph(InterviewState)
@@ -449,6 +449,6 @@ ${fields.join('\n\n')}
       throw new Error(`Multiple interrupts received: ${interrupts}`)
     }
     
-    return interrupts[0]
+    return interrupts[0] || null
   }
 }

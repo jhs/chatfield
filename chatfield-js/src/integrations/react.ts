@@ -1,5 +1,7 @@
 /**
  * React hooks and utilities for Chatfield
+ * NOTE: This file is being refactored to use the LangGraph-based Interviewer
+ * instead of the removed Conversation class. Temporarily stubbed for compatibility.
  */
 
 // React imports are optional - only used if React is available
@@ -14,7 +16,6 @@ try {
   // React not available - hooks will throw runtime errors
 }
 import { Gatherer, GathererInstance } from '../core/gatherer'
-import { Conversation } from '../core/conversation'
 import { ConversationMessage, CollectedData } from '../core/types'
 import { FieldMeta } from '../core/metadata'
 
@@ -51,13 +52,14 @@ export interface ConversationActions {
 
 /**
  * Hook for managing conversation state and interactions
+ * TODO: Refactor to use Interviewer from interviewer.ts
  */
 export function useConversation(
   gatherer: Gatherer,
   options: UseConversationOptions = {}
 ): [ConversationState, ConversationActions] {
   
-  const conversationRef = useRef<Conversation>()
+  const conversationRef = useRef<any>() // TODO: Replace with Interviewer
   const [state, setState] = useState<ConversationState>(() => {
     const meta = gatherer.getMeta()
     const totalFields = meta.getFields().length
@@ -76,86 +78,22 @@ export function useConversation(
     }
   })
 
-  // Initialize conversation
+  // Initialize conversation - TODO: Replace with Interviewer initialization
   useEffect(() => {
-    const conversation = new Conversation(gatherer.getMeta())
-    conversationRef.current = conversation
-
-    // Set up event handlers
-    conversation.setEventHandlers({
-      onMessage: (message) => {
-        setState(prev => ({
-          ...prev,
-          messages: [...prev.messages, message],
-          isWaitingForUser: message.role === 'assistant',
-          isLoading: false
-        }))
-      },
-      
-      onFieldStart: (field) => {
-        setState(prev => ({
-          ...prev,
-          currentField: field,
-          validationError: null,
-          isWaitingForUser: true
-        }))
-      },
-      
-      onFieldComplete: (field, value) => {
-        setState(prev => {
-          const newCollectedData = { ...prev.collectedData, [field.name]: value }
-          const completedCount = Object.keys(newCollectedData).length
-          const progress = (completedCount / prev.totalFields) * 100
-          
-          return {
-            ...prev,
-            collectedData: newCollectedData,
-            completedFields: completedCount,
-            progress,
-            validationError: null,
-            isWaitingForUser: false
-          }
-        })
-        
-        options.onFieldChange?.(field.name, value)
-      },
-      
-      onValidationError: (field, error) => {
-        setState(prev => ({
-          ...prev,
-          validationError: error,
-          isWaitingForUser: true,
-          isLoading: false
-        }))
-      }
-    })
-
+    // Temporary stub - needs Interviewer integration
+    console.warn('React integration needs refactoring to use Interviewer')
+    
     // Start the conversation
     const startConversation = async () => {
       setState(prev => ({ ...prev, isLoading: true }))
       
       try {
-        // Get the first field to start
-        const nextField = conversation.getNextField()
-        if (nextField) {
-          setState(prev => ({ ...prev, currentField: nextField }))
-          
-          // Build opening message
-          const openingMessage: ConversationMessage = {
-            role: 'assistant',
-            content: conversation['getOpeningMessage']() || 'Let\'s get started!',
-            timestamp: new Date()
-          }
-          
-          setState(prev => ({
-            ...prev,
-            messages: [openingMessage],
-            isWaitingForUser: true,
-            isLoading: false
-          }))
-        } else {
-          setState(prev => ({ ...prev, isComplete: true, isLoading: false }))
-        }
+        // TODO: Initialize Interviewer and start conversation
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          isWaitingForUser: true
+        }))
       } catch (error) {
         options.onError?.(error as Error)
         setState(prev => ({ ...prev, isLoading: false }))
@@ -166,7 +104,7 @@ export function useConversation(
   }, [gatherer])
 
   const sendMessage = useCallback(async (message: string) => {
-    if (!conversationRef.current || state.isLoading) return
+    if (state.isLoading) return
 
     setState(prev => ({ ...prev, isLoading: true, validationError: null }))
 
@@ -184,39 +122,13 @@ export function useConversation(
         isWaitingForUser: false
       }))
 
-      // Process the response
-      const result = await conversationRef.current.processUserResponse(message)
+      // TODO: Process with Interviewer.go()
       
-      if (result.success) {
-        // Check if conversation is complete
-        const nextField = conversationRef.current.getNextField()
-        if (!nextField) {
-          const finalData = conversationRef.current.getCurrentData()
-          const instance = new GathererInstance(gatherer.getMeta(), finalData)
-          
-          setState(prev => ({
-            ...prev,
-            isComplete: true,
-            isLoading: false
-          }))
-          
-          options.onComplete?.(instance)
-        } else {
-          setState(prev => ({
-            ...prev,
-            currentField: nextField,
-            isWaitingForUser: true,
-            isLoading: false
-          }))
-        }
-      } else if (result.needsRetry) {
-        setState(prev => ({
-          ...prev,
-          validationError: result.feedback || 'Please try again',
-          isWaitingForUser: true,
-          isLoading: false
-        }))
-      }
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        isWaitingForUser: true
+      }))
       
     } catch (error) {
       options.onError?.(error as Error)
@@ -233,8 +145,6 @@ export function useConversation(
   }, [])
 
   const reset = useCallback(() => {
-    conversationRef.current?.reset()
-    
     const meta = gatherer.getMeta()
     const totalFields = meta.getFields().length
     
@@ -250,41 +160,12 @@ export function useConversation(
       completedFields: 0,
       progress: 0
     })
-    
-    // Restart conversation
-    const startConversation = async () => {
-      setState(prev => ({ ...prev, isLoading: true }))
-      
-      const nextField = conversationRef.current?.getNextField()
-      if (nextField) {
-        setState(prev => ({
-          ...prev,
-          currentField: nextField,
-          isWaitingForUser: true,
-          isLoading: false
-        }))
-      }
-    }
-
-    startConversation()
   }, [gatherer])
 
   const skipField = useCallback(() => {
-    if (!conversationRef.current || !state.currentField) return
-
-    // Move to next field
-    const nextField = conversationRef.current.getNextField()
-    
-    if (nextField) {
-      setState(prev => ({
-        ...prev,
-        currentField: nextField,
-        validationError: null
-      }))
-    } else {
-      setState(prev => ({ ...prev, isComplete: true }))
-    }
-  }, [state.currentField])
+    // TODO: Implement field skipping with Interviewer
+    console.warn('Field skipping not yet implemented with Interviewer')
+  }, [])
 
   return [
     state,
@@ -304,7 +185,7 @@ export function useGatherer(gatherer: Gatherer) {
     // Convenience getters
     canSend: !state.isLoading && state.isWaitingForUser,
     hasError: !!state.validationError,
-    summary: conversationRef.current?.getConversationSummary() || ''
+    summary: '' // TODO: Get summary from Interviewer
   }
 }
 
@@ -390,14 +271,8 @@ export function useControlledGatherer(gatherer: Gatherer) {
     const field = meta.getField(fieldName)
     if (!field) return true
 
-    const conversation = new Conversation(meta)
-    const result = await conversation.validateResponse(field, value)
-    
-    if (!result.isValid) {
-      setValidationErrors(prev => ({ ...prev, [fieldName]: result.feedback }))
-      return false
-    }
-    
+    // TODO: Validate with Interviewer
+    // For now, always return valid
     return true
   }, [meta])
 

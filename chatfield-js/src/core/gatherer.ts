@@ -3,8 +3,8 @@
  */
 
 import { GathererMeta } from './metadata'
-import { Conversation } from './conversation'
 import { CollectedData, GathererOptions } from './types'
+// TODO: Replace with Interviewer from interviewer.ts
 
 /**
  * Instance created after completing a conversation
@@ -108,12 +108,9 @@ export class Gatherer {
    * Conduct a conversation to gather data
    */
   async gather(): Promise<GathererInstance> {
-    const conversation = new Conversation(this.meta, {
-      maxRetryAttempts: this.options.maxRetryAttempts,
-      llmBackend: this.options.llmBackend
-    })
-
-    const collectedData = await conversation.conductConversation()
+    // TODO: Replace with Interviewer implementation
+    console.warn('Gatherer.gather() needs refactoring to use Interviewer')
+    const collectedData = {} // Temporary stub
     return new GathererInstance(this.meta, collectedData)
   }
 

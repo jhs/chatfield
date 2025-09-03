@@ -4,7 +4,7 @@
  */
 
 import { chatfield } from '../src/builders/gatherer-builder'
-import { MockLLMBackend } from '../src/backends/llm-backend'
+// import { MockLLMBackend } from '../src/backends/llm-backend' // Removed - use Interviewer mock
 import { Interviewer } from '../src/core/interviewer'
 
 describe('Custom Transformations', () => {

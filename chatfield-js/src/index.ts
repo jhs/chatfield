@@ -10,8 +10,6 @@ export type { GathererClass } from './decorators'
 // Core classes and types
 export { FieldMeta, GathererMeta } from './core/metadata'
 export { Gatherer, GathererInstance } from './core/gatherer'
-export { Conversation } from './core/conversation'
-export { LLMBackend, OpenAIBackend, MockLLMBackend } from './backends/llm-backend'
 
 // Alternative builder API (secondary)
 export { chatfield } from './builders/gatherer-builder'

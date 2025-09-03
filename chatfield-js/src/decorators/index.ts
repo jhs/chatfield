@@ -5,7 +5,7 @@
 import 'reflect-metadata'
 import { GathererMeta, FieldMeta } from '../core/metadata'
 import { Gatherer, GathererInstance } from '../core/gatherer'
-import { Conversation } from '../core/conversation'
+// TODO: Replace with Interviewer from interviewer.ts
 
 // Metadata keys for storing decorator information
 const CHATFIELD_FIELDS = Symbol('chatfield:fields')
@@ -151,8 +151,9 @@ export function gather<T extends { new(...args: any[]): {} }>(constructor: T): T
   // Create new class that extends the original
   class GatheredClass extends constructor {
     static async gather(): Promise<GathererInstance> {
-      const conversation = new Conversation(meta)
-      const collectedData = await conversation.conductConversation()
+      // TODO: Replace with Interviewer implementation
+      console.warn('Decorator gather() needs refactoring to use Interviewer')
+      const collectedData = {} // Temporary stub
       return new GathererInstance(meta, collectedData)
     }
     
@@ -200,8 +201,8 @@ function processGathererClass(cls: any): GathererMeta {
     const fieldMeta = meta.addField(fieldDesc.name, fieldDesc.description)
     
     // Add validation rules
-    fieldDesc.mustRules.forEach(rule => fieldMeta.addMustRule(rule))
-    fieldDesc.rejectRules.forEach(rule => fieldMeta.addRejectRule(rule))
+    fieldDesc.mustRules.forEach((rule: string) => fieldMeta.addMustRule(rule))
+    fieldDesc.rejectRules.forEach((rule: string) => fieldMeta.addRejectRule(rule))
     
     if (fieldDesc.hint) {
       fieldMeta.setHint(fieldDesc.hint)

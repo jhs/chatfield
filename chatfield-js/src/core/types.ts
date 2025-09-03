@@ -37,7 +37,6 @@ export interface ValidationResult {
 
 export interface GathererOptions {
   maxRetryAttempts?: number
-  llmBackend?: any // Will be properly typed when LLMBackend is implemented
 }
 
 export interface CollectedData {
