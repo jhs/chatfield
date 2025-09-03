@@ -10,7 +10,7 @@ Chatfield is a dual-implementation project that transforms data collection from 
 
 ```
 Chatfield/
-├── chatfield/           # Python implementation (v0.2.0)
+├── chatfield-py/        # Python implementation (v0.2.0)
 │   ├── chatfield/       # Core Python package
 │   ├── examples/        # Python usage examples
 │   └── tests/           # Python test suite
@@ -22,11 +22,11 @@ Chatfield/
 
 ## Development Commands
 
-### Python Implementation (chatfield/)
+### Python Implementation (chatfield-py/)
 
 ```bash
 # Testing
-cd chatfield && python -m pytest                    # Run all tests
+cd chatfield-py && python -m pytest                    # Run all tests
 python -m pytest tests/test_interview.py            # Run specific test file
 python -m pytest -k "test_name"                     # Run specific test
 python -m pytest -m "not slow"                      # Skip slow tests
@@ -93,10 +93,10 @@ npx tsx examples/basic-usage.ts                     # Run any example directly
 ## Key Files to Understand
 
 ### Python
-- `chatfield/interview.py`: Base Interview class with field discovery
-- `chatfield/interviewer.py`: LangGraph-based conversation orchestration
-- `chatfield/decorators.py`: All decorator implementations
-- `chatfield/field_proxy.py`: FieldProxy string subclass for transformations
+- `chatfield-py/chatfield/interview.py`: Base Interview class with field discovery
+- `chatfield-py/chatfield/interviewer.py`: LangGraph-based conversation orchestration
+- `chatfield-py/chatfield/decorators.py`: All decorator implementations
+- `chatfield-py/chatfield/field_proxy.py`: FieldProxy string subclass for transformations
 
 ### TypeScript
 - `chatfield-js/src/core/types.ts`: Core type definitions
@@ -128,7 +128,7 @@ export OPENAI_API_KEY=your-api-key
 ## Common Development Tasks
 
 ### Adding a New Decorator (Python)
-1. Add decorator class to `chatfield/decorators.py`
+1. Add decorator class to `chatfield-py/chatfield/decorators.py`
 2. Update field discovery in `interview.py` if needed
 3. Add transformation handling in `interviewer.py`
 4. Write tests in `tests/test_decorators.py`
@@ -140,7 +140,7 @@ export OPENAI_API_KEY=your-api-key
 4. Add tests to `tests/test_builder.test.ts`
 
 ### Running Examples
-- Python: `cd chatfield/examples && python bug_report.py`
+- Python: `cd chatfield-py/examples && python bug_report.py`
 - TypeScript: `cd chatfield-js && npx tsx examples/basic-usage.ts`
 
 ## Important Patterns

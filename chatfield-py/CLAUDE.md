@@ -17,7 +17,7 @@ Chatfield is a Python package that transforms data gathering from rigid forms in
 ## Implementation Structure
 
 ```
-chatfield/
+chatfield-py/chatfield/
 ├── __init__.py          # Main exports
 ├── interview.py         # Interview base class
 ├── interviewer.py       # Interviewer with LangGraph orchestration

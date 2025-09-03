@@ -72,7 +72,7 @@ console.log(result.steps, result.expected, result.actual)
 
 This repository contains two parallel implementations:
 
-### `/chatfield` - Python Implementation
+### `/chatfield-py` - Python Implementation
 - Decorator-based API with LangGraph orchestration
 - OpenAI integration with extensible LLM support
 - Rich validation and transformation system
@@ -88,7 +88,7 @@ This repository contains two parallel implementations:
 
 ### Python
 ```bash
-cd chatfield
+cd chatfield-py
 pip install .
 ```
 
@@ -100,9 +100,9 @@ npm install
 
 ## Documentation
 
-- [Python Documentation](./chatfield/README.md)
+- [Python Documentation](./chatfield-py/README.md)
 - [TypeScript/JavaScript Documentation](./chatfield-js/README.md)
-- [Python Examples](./chatfield/examples/)
+- [Python Examples](./chatfield-py/examples/)
 - [TypeScript Examples](./chatfield-js/examples/)
 
 ## Development
@@ -120,7 +120,7 @@ We welcome contributions to either implementation! Please see the individual pro
 
 ```bash
 # Python tests
-cd chatfield && python -m pytest
+cd chatfield-py && python -m pytest
 
 # JavaScript tests  
 cd chatfield-js && npm test
@@ -140,7 +140,7 @@ export OPENAI_API_KEY=your-api-key
 
 ## Learn More
 
-- **Python Details**: See [chatfield/CLAUDE.md](./chatfield/CLAUDE.md) for implementation details
+- **Python Details**: See [chatfield-py/CLAUDE.md](./chatfield-py/CLAUDE.md) for implementation details
 - **TypeScript Details**: See [chatfield-js/CLAUDE.md](./chatfield-js/CLAUDE.md) for implementation details
 
 ## Status
