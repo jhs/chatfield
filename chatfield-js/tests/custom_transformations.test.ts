@@ -3,9 +3,9 @@
  * This test file shows how TypeScript supports dynamic custom transformations.
  */
 
-import { chatfield } from '../src/builders/gatherer-builder'
+import { chatfield } from '../src/builder'
 // import { MockLLMBackend } from '../src/backends/llm-backend' // Removed - use Interviewer mock
-import { Interviewer } from '../src/core/interviewer'
+// import { Interviewer } from '../src/core/interviewer'
 
 describe('Custom Transformations', () => {
   test('multiple custom transformations on same field', () => {
@@ -13,20 +13,21 @@ describe('Custom Transformations', () => {
     const MultiTransformForm = chatfield()
       .field('value')
         .desc('Enter a value')
-        .as_int
-        .as_int.neg1('This is always -1')
-        .as_int.doubled('Double the integer value')
-        .as_int.squared('Square the integer value')
-        .as_bool.even('True if the integer is even')
-        .as_lang.fr('French translation')
-        .as_str.uppercase('Convert to uppercase')
+        .as_int()  // Base transformation
+        .as_int('neg1', 'This is always -1')
+        .as_int('doubled', 'Double the integer value')
+        .as_int('squared', 'Square the integer value')
+        .as_bool('even', 'True if the integer is even')
+        .as_lang('fr', 'French translation')
+        .as_str('uppercase', 'Convert to uppercase')
       .build()
 
     // Check that all custom transformations were created
     const fields = MultiTransformForm._chatfield.fields
     expect(fields['value']).toBeDefined()
     
-    const casts = fields['value'].casts
+    const casts = fields['value']?.casts
+    if (!casts) throw new Error('Casts not defined')
     
     // Check base transformations
     expect(casts['as_int']).toBeDefined()
@@ -81,12 +82,13 @@ describe('Custom Transformations', () => {
 
     // Access the values through properties (mirroring Python's FieldProxy behavior)
     expect(mockForm.value).toBe('six')
-    expect(mockForm._chatfield.fields.value.value.as_int).toBe(6)
-    expect(mockForm._chatfield.fields.value.value.as_int_neg1).toBe(-1)
-    expect(mockForm._chatfield.fields.value.value.as_int_doubled).toBe(12)
-    expect(mockForm._chatfield.fields.value.value.as_int_squared).toBe(36)
-    expect(mockForm._chatfield.fields.value.value.as_bool_even).toBe(true)
-    expect(mockForm._chatfield.fields.value.value.as_lang_fr).toBe('six')
-    expect(mockForm._chatfield.fields.value.value.as_str_uppercase).toBe('SIX')
+    const fieldValue = mockForm._chatfield.fields.value?.value
+    expect(fieldValue?.as_int).toBe(6)
+    expect(fieldValue?.as_int_neg1).toBe(-1)
+    expect(fieldValue?.as_int_doubled).toBe(12)
+    expect(fieldValue?.as_int_squared).toBe(36)
+    expect(fieldValue?.as_bool_even).toBe(true)
+    expect(fieldValue?.as_lang_fr).toBe('six')
+    expect(fieldValue?.as_str_uppercase).toBe('SIX')
   })
 })
