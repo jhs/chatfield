@@ -4,6 +4,7 @@
  */
 
 import { createFieldProxy } from './field-proxy'
+import type { FieldSpecs } from './builder-types'
 
 /**
  * Main Interview class that holds collected data
@@ -20,7 +21,7 @@ export class Interview {
     }
     fields: Record<string, {
       desc: string
-      specs: { must?: string[]; reject?: string[]; hint?: string[] }
+      specs: FieldSpecs
       casts: Record<string, any>
       value: null | {
         value: string

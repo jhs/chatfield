@@ -20,8 +20,8 @@ describe('TestBasicBuilder', () => {
     expect(Object.keys(meta.fields).length).toBe(2)
     expect('name' in meta.fields).toBe(true)
     expect('email' in meta.fields).toBe(true)
-    expect(meta.fields.name.desc).toBe('Your name')
-    expect(meta.fields.email.desc).toBe('Your email')
+    expect(meta.fields.name?.desc).toBe('Your name')
+    expect(meta.fields.email?.desc).toBe('Your email')
   })
 
   test('test_field_validation_rules', () => {
@@ -35,9 +35,9 @@ describe('TestBasicBuilder', () => {
       .build()
 
     const fieldMeta = instance._chatfield.fields.field
-    expect(fieldMeta.specs.must).toContain('specific requirement')
-    expect(fieldMeta.specs.reject).toContain('avoid this')
-    expect(fieldMeta.specs.hint).toContain('Helpful tip')
+    expect(fieldMeta?.specs.must).toContain('specific requirement')
+    expect(fieldMeta?.specs.reject).toContain('avoid this')
+    expect(fieldMeta?.specs.hint).toContain('Helpful tip')
   })
 
   test('test_multiple_validation_rules', () => {
@@ -52,7 +52,7 @@ describe('TestBasicBuilder', () => {
 
     const fieldMeta = instance._chatfield.fields.field
     // Builder should maintain order
-    expect(fieldMeta.specs.must).toEqual(['rule 1', 'rule 2', 'rule 3'])
+    expect(fieldMeta?.specs.must).toEqual(['rule 1', 'rule 2', 'rule 3'])
   })
 
   test('test_multiple_hints', () => {
@@ -66,8 +66,8 @@ describe('TestBasicBuilder', () => {
       .build()
 
     const fieldMeta = instance._chatfield.fields.field
-    expect(fieldMeta.specs.hint).toEqual(['First hint', 'Second hint', 'Third hint'])
-    expect(fieldMeta.specs.hint.length).toBe(3)
+    expect(fieldMeta?.specs.hint).toEqual(['First hint', 'Second hint', 'Third hint'])
+    expect(fieldMeta?.specs.hint?.length).toBe(3)
   })
 
   test('test_combined_field_features', () => {
@@ -82,10 +82,10 @@ describe('TestBasicBuilder', () => {
 
     const fieldMeta = instance._chatfield.fields.complex_field
 
-    expect(fieldMeta.desc).toBe('Complex field')
-    expect(fieldMeta.specs.must).toContain('required info')
-    expect(fieldMeta.specs.reject).toContain('forbidden content')
-    expect(fieldMeta.specs.hint).toContain('Helpful guidance')
+    expect(fieldMeta?.desc).toBe('Complex field')
+    expect(fieldMeta?.specs.must).toContain('required info')
+    expect(fieldMeta?.specs.reject).toContain('forbidden content')
+    expect(fieldMeta?.specs.hint).toContain('Helpful guidance')
   })
 })
 
@@ -174,8 +174,8 @@ describe('TestRoleConfiguration', () => {
     // Check fields
     expect('field1' in meta.fields).toBe(true)
     expect('field2' in meta.fields).toBe(true)
-    expect(meta.fields.field1.desc).toBe('First field')
-    expect(meta.fields.field2.desc).toBe('Second field')
+    expect(meta.fields.field1?.desc).toBe('First field')
+    expect(meta.fields.field2?.desc).toBe('Second field')
   })
 })
 

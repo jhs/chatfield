@@ -4,6 +4,7 @@
  */
 
 import { Interview } from './interview'
+import type { FieldSpecs } from './builder-types'
 
 /**
  * Builder for trait.possible() pattern.
@@ -18,7 +19,7 @@ export class TraitBuilder {
     this.role = role
   }
 
-  call(trait: string): RoleBuilder {
+  __call__(trait: string): RoleBuilder {
     // Add a regular trait
     this.parent._addTrait(this.role, trait)
     return this.parent
@@ -192,7 +193,7 @@ export class FieldBuilder {
         hint: [],
         confidential: false,
         conclude: false
-      },
+      } as FieldSpecs,
       casts: {},
       value: null
     }
@@ -441,6 +442,10 @@ export class ChatfieldBuilder {
 export function chatfield(): ChatfieldBuilder {
   return new ChatfieldBuilder()
 }
+
+// Re-export the new type-safe versions
+export { chatfield as chatfieldV2, chatfieldDynamic, TypedInterview } from './builder-v2'
+export type { InterviewMeta, FieldSpecs, FieldMeta, RoleMeta, TraitBuilder as TraitBuilderInterface, CastBuilder as CastBuilderInterface } from './builder-types'
 
 /**
  * Preset builders for common patterns
