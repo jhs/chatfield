@@ -74,17 +74,20 @@ export interface TraitBuilder {
 }
 
 /**
- * Callable cast builder interface
+ * Callable cast builder interface with function overloads
  */
 export interface CastBuilder<TParent> {
-  (prompt?: string): TParent  // Direct call for base cast
-  [subAttribute: string]: (prompt?: string) => TParent  // Sub-attributes like .fr, .even
+  // Overloads for different parameter combinations
+  (): TParent                                           // No args (for optional sub-name casts)
+  (promptOrSubName: string): TParent                   // Single arg
+  (subName: string, prompt: string): TParent           // Two args
+  (...args: any[]): TParent                           // Catch-all for flexibility
 }
 
 /**
- * Callable choice builder interface
+ * Callable choice builder interface with function overloads
  */
 export interface ChoiceBuilder<TParent> {
-  (...choices: string[]): TParent  // Direct call with choices
-  [subAttribute: string]: (...choices: string[]) => TParent  // Sub-attributes
+  (...choices: string[]): TParent                             // Direct choices
+  (subName: string, ...choices: string[]): TParent            // Sub-name + choices
 }

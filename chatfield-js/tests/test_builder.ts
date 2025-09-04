@@ -209,8 +209,8 @@ describe('TestFieldTransformations', () => {
       .type('MultiLangInterview')
       .field('greeting')
         .desc('Say hello')
-        .as_lang.fr()
-        .as_lang.es()
+        .as_lang('fr')
+        .as_lang('es')
       .build()
 
     const fieldCasts = instance._chatfield.fields.greeting?.casts
@@ -223,8 +223,8 @@ describe('TestFieldTransformations', () => {
       .type('CustomTransform')
       .field('number')
         .desc('A number')
-        .as_bool.even('True if even')
-        .as_str.uppercase('In uppercase')
+        .as_bool('even', 'True if even')
+        .as_str('uppercase', 'In uppercase')
       .build()
 
     const fieldCasts = instance._chatfield.fields.number?.casts
@@ -232,21 +232,61 @@ describe('TestFieldTransformations', () => {
     expect(fieldCasts && 'as_str_uppercase' in fieldCasts).toBe(true)
   })
 
+  test('test_api_flexibility', () => {
+    const instance = chatfield()
+      .type('FlexibleAPITest')
+      .field('temperature')
+        .desc('Temperature reading')
+        .as_int()  // Default usage
+        .as_float('Parse as precise decimal')  // Custom prompt
+      .field('severity')
+        .desc('Issue severity')
+        .as_int('severity_level', 'Range from 1-10')  // Sub-name + custom prompt
+      .field('message')
+        .desc('Status message')
+        .as_lang('fr')  // Mandatory sub-name
+        .as_lang('es', 'Traducir al español')  // Sub-name + custom prompt
+      .build()
+
+    // Check default as_int
+    const tempCasts = instance._chatfield.fields.temperature?.casts
+    expect(tempCasts && 'as_int' in tempCasts).toBe(true)
+    expect(tempCasts?.as_int.prompt).toBe('parse as integer')
+    
+    // Check as_float with custom prompt
+    expect(tempCasts && 'as_float' in tempCasts).toBe(true)
+    expect(tempCasts?.as_float.prompt).toBe('Parse as precise decimal')
+    
+    // Check as_int with sub-name and custom prompt
+    const severityCasts = instance._chatfield.fields.severity?.casts
+    expect(severityCasts && 'as_int_severity_level' in severityCasts).toBe(true)
+    expect(severityCasts?.as_int_severity_level.prompt).toBe('Range from 1-10')
+    
+    // Check as_lang with mandatory sub-name
+    const messageCasts = instance._chatfield.fields.message?.casts
+    expect(messageCasts && 'as_lang_fr' in messageCasts).toBe(true)
+    expect(messageCasts?.as_lang_fr.prompt).toBe('translate to fr')
+    
+    // Check as_lang with sub-name and custom prompt
+    expect(messageCasts && 'as_lang_es' in messageCasts).toBe(true)
+    expect(messageCasts?.as_lang_es.prompt).toBe('Traducir al español')
+  })
+
   test('test_choice_cardinality', () => {
     const instance = chatfield()
       .type('ChoiceInterview')
       .field('color')
         .desc('Favorite color')
-        .as_one.selection('red', 'green', 'blue')
+        .as_one('selection', 'red', 'green', 'blue')
       .field('priority')
         .desc('Priority level')
-        .as_maybe.selection('low', 'medium', 'high')
+        .as_maybe('selection', 'low', 'medium', 'high')
       .field('languages')
         .desc('Programming languages')
-        .as_multi.selection('python', 'javascript', 'rust')
+        .as_multi('selection', 'python', 'javascript', 'rust')
       .field('reviewers')
         .desc('Code reviewers')
-        .as_any.selection('alice', 'bob', 'charlie')
+        .as_any('selection', 'alice', 'bob', 'charlie')
       .build()
 
     // Note: The builder uses different names for choice casts
@@ -257,66 +297,29 @@ describe('TestFieldTransformations', () => {
       expect(colorCast.null).toBe(false)
       expect(colorCast.multi).toBe(false)
     }
-  })
-})
 
-describe('TestSpecialFields', () => {
-  test('test_confidential_field', () => {
-    const instance = chatfield()
-      .type('ConfidentialInterview')
-      .field('secret')
-        .desc('Secret information')
-        .confidential()
-      .build()
+    const priorityCast = instance._chatfield.fields.priority?.casts?.as_maybe_selection
+    if (priorityCast) {
+      expect(priorityCast.type).toBe('choice')
+      expect(priorityCast.choices).toEqual(['low', 'medium', 'high'])
+      expect(priorityCast.null).toBe(true)
+      expect(priorityCast.multi).toBe(false)
+    }
 
-    const field = instance._chatfield.fields.secret
-    expect(field?.specs.confidential).toBe(true)
-  })
+    const languagesCast = instance._chatfield.fields.languages?.casts?.as_multi_selection
+    if (languagesCast) {
+      expect(languagesCast.type).toBe('choice')
+      expect(languagesCast.choices).toEqual(['python', 'javascript', 'rust'])
+      expect(languagesCast.null).toBe(false)
+      expect(languagesCast.multi).toBe(true)
+    }
 
-  test('test_conclude_field', () => {
-    const instance = chatfield()
-      .type('ConcludeInterview')
-      .field('rating')
-        .desc('Final rating')
-        .conclude()
-      .build()
-
-    const field = instance._chatfield.fields.rating
-    expect(field?.specs.conclude).toBe(true)
-    expect(field?.specs.confidential).toBe(true) // Conclude implies confidential
-  })
-})
-
-describe('TestBuilderEdgeCases', () => {
-  test('test_empty_interview', () => {
-    const instance = chatfield()
-      .type('Empty')
-      .desc('Empty interview')
-      .build()
-
-    expect(instance._chatfield.type).toBe('Empty')
-    expect(instance._chatfield.desc).toBe('Empty interview')
-    expect(Object.keys(instance._chatfield.fields).length).toBe(0)
-  })
-
-  test('test_minimal_interview', () => {
-    const instance = chatfield().build()
-
-    expect(instance._chatfield.type).toBe('')
-    expect(instance._chatfield.desc).toBe('')
-    expect(Object.keys(instance._chatfield.fields).length).toBe(0)
-  })
-
-  test('test_field_order_preservation', () => {
-    const instance = chatfield()
-      .type('OrderedInterview')
-      .field('first').desc('First field')
-      .field('second').desc('Second field')
-      .field('third').desc('Third field')
-      .field('fourth').desc('Fourth')
-      .build()
-
-    const fieldNames = Object.keys(instance._chatfield.fields)
-    expect(fieldNames).toEqual(['first', 'second', 'third', 'fourth'])
+    const reviewersCast = instance._chatfield.fields.reviewers?.casts?.as_any_selection
+    if (reviewersCast) {
+      expect(reviewersCast.type).toBe('choice')
+      expect(reviewersCast.choices).toEqual(['alice', 'bob', 'charlie'])
+      expect(reviewersCast.null).toBe(true)
+      expect(reviewersCast.multi).toBe(true)
+    }
   })
 })

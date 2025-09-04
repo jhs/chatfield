@@ -33,47 +33,71 @@ function createTraitBuilder(parent: RoleBuilder, role: string): TraitBuilder {
 }
 
 /**
- * Creates a callable CastBuilder with dynamic sub-attributes
+ * Creates a callable CastBuilder with function-based API
  */
 function createCastBuilder<TParent extends FieldBuilder<any, any>>(
   parent: TParent,
   baseName: string,
   primitiveType: any,
-  basePrompt: string
+  basePrompt: string,
+  requiresSubName: boolean = false
 ): CastBuilder<TParent> {
-  const applyBaseCast = (prompt?: string) => {
+  // Function with overloads for different parameter combinations
+  const castFunction = function(...args: any[]): TParent {
+    let subName: string | undefined
+    let customPrompt: string | undefined
+    
+    if (requiresSubName) {
+      // Mandatory sub-name (like as_lang)
+      // as_lang("fr") or as_lang("fr", "Translate to French")
+      if (args.length === 0) {
+        throw new Error(`${baseName} requires a sub-name parameter`)
+      }
+      subName = String(args[0])
+      customPrompt = args[1] ? String(args[1]) : undefined
+    } else {
+      // Optional sub-name (like as_int)
+      if (args.length === 0) {
+        // as_int() - default behavior
+      } else if (args.length === 1) {
+        // as_int("custom prompt") - override prompt
+        customPrompt = String(args[0])
+      } else if (args.length >= 2) {
+        // as_int("severity", "Range 0-10") - sub-name + prompt
+        subName = String(args[0])
+        customPrompt = String(args[1])
+      }
+    }
+    
+    // Build the cast name
+    const castName = subName ? `${baseName}_${subName}` : baseName
+    
+    // Build the prompt
+    let finalPrompt: string
+    if (customPrompt) {
+      finalPrompt = customPrompt
+    } else if (subName && basePrompt.includes('{name}')) {
+      finalPrompt = basePrompt.replace('{name}', subName)
+    } else if (subName) {
+      finalPrompt = `${basePrompt} for ${subName}`
+    } else {
+      finalPrompt = basePrompt
+    }
+    
+    // Store the cast
     const castInfo: CastInfo = {
       type: typeof primitiveType === 'function' ? primitiveType.name.toLowerCase() : String(primitiveType),
-      prompt: prompt || basePrompt
+      prompt: finalPrompt
     }
-    parent._chatfieldField.casts[baseName] = castInfo
+    parent._chatfieldField.casts[castName] = castInfo
     return parent
   }
   
-  // Use Proxy to handle dynamic sub-attributes
-  return new Proxy(applyBaseCast, {
-    get(_target, prop: string) {
-      if (prop === 'apply' || prop === 'call' || prop === 'bind') {
-        return Reflect.get(applyBaseCast, prop)
-      }
-      
-      // Return a function for sub-attributes like .fr, .even
-      return (prompt?: string) => {
-        const compoundName = `${baseName}_${prop}`
-        const compoundPrompt = basePrompt.replace('{name}', String(prop))
-        const castInfo: CastInfo = {
-          type: typeof primitiveType === 'function' ? primitiveType.name.toLowerCase() : String(primitiveType),
-          prompt: prompt || compoundPrompt
-        }
-        parent._chatfieldField.casts[compoundName] = castInfo
-        return parent
-      }
-    }
-  }) as CastBuilder<TParent>
+  return castFunction as CastBuilder<TParent>
 }
 
 /**
- * Creates a callable ChoiceBuilder with dynamic sub-attributes
+ * Creates a callable ChoiceBuilder with function-based API
  */
 function createChoiceBuilder<TParent extends FieldBuilder<any, any>>(
   parent: TParent,
@@ -81,40 +105,47 @@ function createChoiceBuilder<TParent extends FieldBuilder<any, any>>(
   nullAllowed: boolean,
   multi: boolean
 ): ChoiceBuilder<TParent> {
-  const applyChoice = (...choices: string[]) => {
+  const choiceFunction = function(...args: any[]): TParent {
+    let subName: string | undefined
+    let choices: string[]
+    
+    // Check if first arg is a sub-name (non-choice string followed by choices)
+    if (args.length >= 2 && typeof args[0] === 'string') {
+      // Could be as_one('selection', 'red', 'green', 'blue')
+      // We'll treat it as sub-name if followed by more strings
+      const possibleChoices = args.slice(1)
+      if (possibleChoices.every(arg => typeof arg === 'string')) {
+        subName = args[0]
+        choices = possibleChoices
+      } else {
+        // All args are choices
+        choices = args
+      }
+    } else {
+      // Direct choices: as_one('red', 'green', 'blue')
+      choices = args
+    }
+    
+    // Build the cast name
+    const castName = subName ? `${baseName}_${subName}` : baseName
+    
+    // Build the prompt
+    const promptBase = `Choose ${multi ? 'one or more' : 'one'}`
+    const prompt = subName ? `${promptBase} for ${subName}` : promptBase
+    
+    // Store the cast
     const castInfo: CastInfo = {
       type: 'choice',
-      prompt: `Choose ${multi ? 'one or more' : 'one'}`,
+      prompt: prompt,
       choices: choices,
       null: nullAllowed,
       multi: multi
     }
-    parent._chatfieldField.casts[baseName] = castInfo
+    parent._chatfieldField.casts[castName] = castInfo
     return parent
   }
   
-  // Use Proxy to handle dynamic sub-attributes
-  return new Proxy(applyChoice, {
-    get(_target, prop: string) {
-      if (prop === 'apply' || prop === 'call' || prop === 'bind') {
-        return Reflect.get(applyChoice, prop)
-      }
-      
-      // Return a function for sub-attributes
-      return (...choices: string[]) => {
-        const compoundName = `${baseName}_${prop}`
-        const castInfo: CastInfo = {
-          type: 'choice',
-          prompt: `Choose for ${prop}`,
-          choices: choices,
-          null: nullAllowed,
-          multi: multi
-        }
-        parent._chatfieldField.casts[compoundName] = castInfo
-        return parent
-      }
-    }
-  }) as ChoiceBuilder<TParent>
+  return choiceFunction as ChoiceBuilder<TParent>
 }
 
 /**
@@ -210,6 +241,7 @@ export class FieldBuilder<Fields extends string, CurrentField extends string> {
   as_bool: CastBuilder<this>
   as_percent: CastBuilder<this>
   as_lang: CastBuilder<this>
+  as_str: CastBuilder<this>
   as_one: ChoiceBuilder<this>
   as_maybe: ChoiceBuilder<this>
   as_multi: ChoiceBuilder<this>
@@ -240,11 +272,15 @@ export class FieldBuilder<Fields extends string, CurrentField extends string> {
     this.parent._currentField = fieldName as string
     
     // Initialize cast builders
-    this.as_int = createCastBuilder(this, 'as_int', Number, 'parse as integer')
-    this.as_float = createCastBuilder(this, 'as_float', Number, 'parse as float')
-    this.as_bool = createCastBuilder(this, 'as_bool', Boolean, 'parse as boolean')
-    this.as_percent = createCastBuilder(this, 'as_percent', Number, 'parse as percentage (0-100)')
-    this.as_lang = createCastBuilder(this, 'as_lang', String, 'translate to {name}')
+    // Optional sub-name casts (can be called with 0, 1, or 2 args)
+    this.as_int = createCastBuilder(this, 'as_int', Number, 'parse as integer', false)
+    this.as_float = createCastBuilder(this, 'as_float', Number, 'parse as float', false)
+    this.as_bool = createCastBuilder(this, 'as_bool', Boolean, 'parse as boolean', false)
+    this.as_percent = createCastBuilder(this, 'as_percent', Number, 'parse as percentage (0-100)', false)
+    // Mandatory sub-name cast (requires at least 1 arg)
+    this.as_lang = createCastBuilder(this, 'as_lang', String, 'translate to {name}', true)
+    // Add as_str for custom transformations
+    this.as_str = createCastBuilder(this, 'as_str', String, 'format as {name}', false)
     
     // Initialize choice builders
     this.as_one = createChoiceBuilder(this, 'as_one', false, false)
