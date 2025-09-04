@@ -122,6 +122,7 @@ class ChoiceBuilder:
     def __init__(self, parent: 'FieldBuilder', base_name: str, null: bool, multi: bool):
         self.parent = parent
         self.base_name = base_name
+        # TODO: These do not drive any implementation. I think the logic checks the key name for ^as_one_, etc.
         self.null = null
         self.multi = multi
     
