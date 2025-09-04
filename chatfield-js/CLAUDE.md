@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## CRITICAL: Primary Mission
 
 **The TypeScript implementation MUST stay synchronized with the Python implementation.** This means:
-- **Filenames**: Match Python's naming (e.g., `interview.py` → `interview.ts`, `test_builder.py` → `test_builder.ts`)
+- **Filenames**: Match Python's naming (e.g., `interview.py` → `interview.ts`)
+- **Test Files**: Python uses `test_*.py`, TypeScript uses `*.test.ts` (e.g., `test_builder.py` → `builder.test.ts`)
 - **Class/Function Names**: Keep identical names (e.g., `Interview`, `Interviewer`, `FieldProxy`)
 - **Method Names**: Preserve Python method names (e.g., `_name()`, `_pretty()`, `as_int`)
 - **Code Logic**: Implement the same algorithms and flows as Python
@@ -32,7 +33,7 @@ chatfield-js/
 │       ├── react.ts     # React hooks and components
 │       ├── react-components.tsx # UI components  
 │       └── copilotkit.tsx # CopilotKit integration
-├── tests/               # Test suite (test_*.ts naming convention)
+├── tests/               # Test suite (*.test.ts naming convention)
 ├── examples/            # Usage examples
 ├── dist/                # Compiled output (generated)
 └── minimal.ts           # Minimal test script for OpenAI API
@@ -78,7 +79,7 @@ npx tsx examples/basic-usage.ts  # Run any example directly
 ### Testing Configuration
 
 - Jest with ts-jest preset for TypeScript support
-- Test files use `test_*.ts` naming convention  
+- Test files use `*.test.ts` naming convention (e.g., `builder.test.ts`)
 - Located in `tests/` directory
 - Uses `tsconfig.test.json` for test compilation
 
@@ -111,8 +112,8 @@ Or use `.env` file in parent directory.
 
 - Unit tests for individual components
 - Integration tests with mock LLM backends
-- Test files follow `test_*.ts` naming pattern
-- Run single test: `npm test -- test_interview.ts`
+- Test files follow `*.test.ts` naming pattern
+- Run single test: `npm test -- interview.test.ts`
 
 ## Important Notes
 
