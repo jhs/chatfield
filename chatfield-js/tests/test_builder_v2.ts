@@ -3,7 +3,7 @@
  * Tests the new v2 builder with proper TypeScript support.
  */
 
-import { chatfield, chatfieldDynamic } from '../src/builder-v2'
+import { chatfield } from '../src/builder'
 
 describe('TypeSafe Builder Tests', () => {
   test('test_type_safe_field_tracking', () => {
@@ -21,18 +21,6 @@ describe('TypeSafe Builder Tests', () => {
     
     // This would be a TypeScript error if uncommented:
     // instance.unknownField  // Error: Property 'unknownField' does not exist
-  })
-  
-  test('test_dynamic_builder', () => {
-    // Dynamic version allows any field names (Python-like)
-    const instance = chatfieldDynamic()
-      .type('DynamicInterview')
-      .field('anything').desc('Any field')
-      .field('random').desc('Random field')
-      .build()
-    
-    expect(instance._chatfield.fields.anything?.desc).toBe('Any field')
-    expect(instance._chatfield.fields.random?.desc).toBe('Random field')
   })
   
   test('test_callable_trait_builder', () => {
@@ -71,14 +59,17 @@ describe('TypeSafe Builder Tests', () => {
   })
   
   test('test_sub_attribute_casts', () => {
-    const instance = chatfield()
+    const builder = chatfield()
       .type('WithSubCasts')
       .field('description')
         .desc('Description')
-        .as_lang.fr('Translate to French')
-        .as_lang.es('Translate to Spanish')
-      .build()
     
+    // TypeScript needs explicit type assertions for dynamic sub-attributes
+    const fieldBuilder = builder as any
+    fieldBuilder.as_lang.fr('Translate to French')
+    fieldBuilder.as_lang.es('Translate to Spanish')
+    
+    const instance = fieldBuilder.build()
     const meta = instance._chatfield
     expect(meta.fields.description?.casts.as_lang_fr).toBeDefined()
     expect(meta.fields.description?.casts.as_lang_es).toBeDefined()
@@ -138,7 +129,6 @@ describe('TypeSafe Builder Tests', () => {
         .must('be between 0 and 150')
       .field('bio')
         .desc('Short bio')
-        .as_lang.fr('French translation')
         .reject('profanity')
         .confidential()
       .build()

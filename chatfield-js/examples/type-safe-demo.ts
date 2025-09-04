@@ -2,7 +2,7 @@
  * Demonstrates the type-safe builder for TypeScript users
  */
 
-import { chatfield, chatfieldDynamic } from '../src/builder-v2'
+import { chatfield, chatfieldDynamic } from '../src/builder'
 
 // Type-safe version - TypeScript knows the field names
 function typeSafeExample() {

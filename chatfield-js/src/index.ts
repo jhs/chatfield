@@ -17,6 +17,7 @@ export {
 // Builder API - mirroring Python  
 export { 
   chatfield,
+  chatfieldDynamic,
   patientGatherer,
   quickGatherer,
   expertGatherer,
@@ -24,10 +25,20 @@ export {
   ChatfieldBuilder,
   FieldBuilder,
   RoleBuilder,
+  // Type exports
+  type TypedInterview
+} from './builder'
+
+// Builder type interfaces
+export type {
   TraitBuilder,
   CastBuilder,
-  ChoiceBuilder
-} from './builder'
+  ChoiceBuilder,
+  InterviewMeta,
+  FieldSpecs,
+  FieldMeta as FieldMetaType,
+  RoleMeta
+} from './builder-types'
 
 // Decorators - mirroring Python
 export { 
@@ -58,7 +69,6 @@ export type {
 // Backwards compatibility exports (deprecated)
 export { Interview as Gatherer } from './interview'
 export { Interview as GathererInstance } from './interview'
-export { InterviewMeta as GathererMeta } from './metadata'
 export type { InterviewSchema as GathererSchema } from './types'
 export type { InterviewOptions as GathererOptions } from './types'
 export { alice as agent, bob as user } from './decorators'

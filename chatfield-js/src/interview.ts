@@ -165,7 +165,7 @@ export class Interview {
   __getattr__(name: string): any {
     if (name in this._chatfield.fields) {
       const field = this._chatfield.fields[name]
-      if (field.value && field.value.value) {
+      if (field && field.value && field.value.value) {
         return createFieldProxy(field.value.value, field)
       }
       return null

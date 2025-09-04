@@ -1,53 +1,138 @@
 /**
- * Builder API for creating Chatfield interviews.
- * Mirrors Python's builder.py
+ * Type-safe Builder API for creating Chatfield interviews.
+ * Mirrors Python's builder.py with full TypeScript type tracking.
  */
 
 import { Interview } from './interview'
-import type { FieldSpecs } from './builder-types'
+import type {
+  FieldMeta,
+  FieldSpecs,
+  InterviewMeta,
+  RoleMeta,
+  TraitBuilder,
+  CastBuilder,
+  ChoiceBuilder,
+  CastInfo
+} from './builder-types'
 
 /**
- * Builder for trait.possible() pattern.
- * Mirrors Python's TraitBuilder
+ * Creates a callable TraitBuilder
  */
-export class TraitBuilder {
-  parent: RoleBuilder
-  role: string
-
-  constructor(parent: RoleBuilder, role: string) {
-    this.parent = parent
-    this.role = role
+function createTraitBuilder(parent: RoleBuilder, role: string): TraitBuilder {
+  const addTrait = (trait: string) => {
+    parent._addTrait(role, trait)
+    return parent
   }
-
-  __call__(trait: string): RoleBuilder {
-    // Add a regular trait
-    this.parent._addTrait(this.role, trait)
-    return this.parent
+  
+  addTrait.possible = (name: string, trigger: string = "") => {
+    parent._addPossibleTrait(role, name, trigger)
+    return parent
   }
+  
+  return addTrait
+}
 
-  possible(name: string, trigger: string = ""): RoleBuilder {
-    // Add a possible trait with optional trigger guidance
-    this.parent._addPossibleTrait(this.role, name, trigger)
-    return this.parent
+/**
+ * Creates a callable CastBuilder with dynamic sub-attributes
+ */
+function createCastBuilder<TParent extends FieldBuilder<any, any>>(
+  parent: TParent,
+  baseName: string,
+  primitiveType: any,
+  basePrompt: string
+): CastBuilder<TParent> {
+  const applyBaseCast = (prompt?: string) => {
+    const castInfo: CastInfo = {
+      type: typeof primitiveType === 'function' ? primitiveType.name.toLowerCase() : String(primitiveType),
+      prompt: prompt || basePrompt
+    }
+    parent._chatfieldField.casts[baseName] = castInfo
+    return parent
   }
+  
+  // Use Proxy to handle dynamic sub-attributes
+  return new Proxy(applyBaseCast, {
+    get(_target, prop: string) {
+      if (prop === 'apply' || prop === 'call' || prop === 'bind') {
+        return Reflect.get(applyBaseCast, prop)
+      }
+      
+      // Return a function for sub-attributes like .fr, .even
+      return (prompt?: string) => {
+        const compoundName = `${baseName}_${prop}`
+        const compoundPrompt = basePrompt.replace('{name}', String(prop))
+        const castInfo: CastInfo = {
+          type: typeof primitiveType === 'function' ? primitiveType.name.toLowerCase() : String(primitiveType),
+          prompt: prompt || compoundPrompt
+        }
+        parent._chatfieldField.casts[compoundName] = castInfo
+        return parent
+      }
+    }
+  }) as CastBuilder<TParent>
+}
+
+/**
+ * Creates a callable ChoiceBuilder with dynamic sub-attributes
+ */
+function createChoiceBuilder<TParent extends FieldBuilder<any, any>>(
+  parent: TParent,
+  baseName: string,
+  nullAllowed: boolean,
+  multi: boolean
+): ChoiceBuilder<TParent> {
+  const applyChoice = (...choices: string[]) => {
+    const castInfo: CastInfo = {
+      type: 'choice',
+      prompt: `Choose ${multi ? 'one or more' : 'one'}`,
+      choices: choices,
+      null: nullAllowed,
+      multi: multi
+    }
+    parent._chatfieldField.casts[baseName] = castInfo
+    return parent
+  }
+  
+  // Use Proxy to handle dynamic sub-attributes
+  return new Proxy(applyChoice, {
+    get(_target, prop: string) {
+      if (prop === 'apply' || prop === 'call' || prop === 'bind') {
+        return Reflect.get(applyChoice, prop)
+      }
+      
+      // Return a function for sub-attributes
+      return (...choices: string[]) => {
+        const compoundName = `${baseName}_${prop}`
+        const castInfo: CastInfo = {
+          type: 'choice',
+          prompt: `Choose for ${prop}`,
+          choices: choices,
+          null: nullAllowed,
+          multi: multi
+        }
+        parent._chatfieldField.casts[compoundName] = castInfo
+        return parent
+      }
+    }
+  }) as ChoiceBuilder<TParent>
 }
 
 /**
  * Builder for alice/bob role configuration.
  * Mirrors Python's RoleBuilder
  */
-export class RoleBuilder {
-  parent: ChatfieldBuilder
+export class RoleBuilder<Fields extends string = never> {
+  parent: ChatfieldBuilder<Fields>
   role: string
   trait: TraitBuilder
 
-  constructor(parent: ChatfieldBuilder, role: string) {
+  constructor(parent: ChatfieldBuilder<Fields>, role: string) {
     this.parent = parent
     this.role = role
     this._ensureRole()
     // Set context for subsequent calls
     this.parent._currentRole = role
-    this.trait = new TraitBuilder(this, role)
+    this.trait = createTraitBuilder(this, role)
   }
 
   private _ensureRole(): void {
@@ -61,258 +146,138 @@ export class RoleBuilder {
     }
   }
 
-  type(roleType: string): RoleBuilder {
+  type(roleType: string): RoleBuilder<Fields> {
     // Set the role type
-    this.parent._chatfield.roles[this.role].type = roleType
+    const roleData = this.parent._chatfield.roles[this.role]
+    if (roleData) {
+      roleData.type = roleType
+    }
     return this
   }
 
   _addTrait(role: string, trait: string): void {
     // Add a regular trait
-    if (!this.parent._chatfield.roles[role].traits.includes(trait)) {
-      this.parent._chatfield.roles[role].traits.push(trait)
+    const roleData = this.parent._chatfield.roles[role]
+    if (roleData && !roleData.traits.includes(trait)) {
+      roleData.traits.push(trait)
     }
   }
 
   _addPossibleTrait(role: string, name: string, trigger: string): void {
     // Add a possible trait
-    this.parent._chatfield.roles[role].possible_traits[name] = {
-      active: false,
-      desc: trigger
+    const roleData = this.parent._chatfield.roles[role]
+    if (roleData && roleData.possible_traits) {
+      roleData.possible_traits[name] = {
+        active: false,
+        desc: trigger
+      }
     }
   }
 
-  field(name: string): FieldBuilder {
+  field<Name extends string>(name: Name): FieldBuilder<Fields | Name, Name> {
     // Start defining a new field
     return this.parent.field(name)
   }
 
-  alice(): RoleBuilder {
+  alice(): RoleBuilder<Fields> {
     // Switch to alice configuration
     return this.parent.alice()
   }
 
-  bob(): RoleBuilder {
+  bob(): RoleBuilder<Fields> {
     // Switch to bob configuration
     return this.parent.bob()
   }
 
-  build(): Interview {
+  build(): TypedInterview<Fields> {
     // Build the final Interview
     return this.parent.build()
   }
 }
 
 /**
- * Builder for cast decorators with sub-attributes.
- * Mirrors Python's CastBuilder
+ * Builder for field configuration with all decorators.
+ * Tracks the field name in the type system.
  */
-export class CastBuilder {
-  parent: FieldBuilder
-  baseName: string
-  primitiveType: any
-  basePrompt: string
+export class FieldBuilder<Fields extends string, CurrentField extends string> {
+  parent: ChatfieldBuilder<Fields>
+  fieldName: CurrentField
+  _chatfieldField: FieldMeta
 
-  constructor(parent: FieldBuilder, baseName: string, primitiveType: any, basePrompt: string) {
-    this.parent = parent
-    this.baseName = baseName
-    this.primitiveType = primitiveType
-    this.basePrompt = basePrompt
-  }
-
-  call(prompt?: string): FieldBuilder {
-    // Apply the base cast
-    const castInfo = {
-      type: typeof this.primitiveType === 'function' ? this.primitiveType.name.toLowerCase() : String(this.primitiveType),
-      prompt: prompt || this.basePrompt
-    }
-    this.parent._chatfieldField.casts[this.baseName] = castInfo
-    return this.parent
-  }
-
-  // Dynamic sub-attributes handled via Proxy in the parent FieldBuilder
-  [key: string]: any
-}
-
-/**
- * Builder for choice cardinality decorators.
- * Mirrors Python's ChoiceBuilder
- */
-export class ChoiceBuilder {
-  parent: FieldBuilder
-  baseName: string
-  null: boolean
-  multi: boolean
-
-  constructor(parent: FieldBuilder, baseName: string, nullAllowed: boolean, multi: boolean) {
-    this.parent = parent
-    this.baseName = baseName
-    this.null = nullAllowed
-    this.multi = multi
-  }
-
-  // Dynamic sub-attributes handled via Proxy in the parent FieldBuilder
-  [key: string]: any
-}
-
-/**
- * Builder for individual fields.
- * Mirrors Python's FieldBuilder
- */
-export class FieldBuilder {
-  parent: ChatfieldBuilder
-  name: string
-  _chatfieldField: any
-  
   // Cast builders
-  as_int: CastBuilder
-  as_float: CastBuilder
-  as_bool: CastBuilder
-  as_str: CastBuilder
-  as_percent: CastBuilder
-  as_list: CastBuilder
-  as_set: CastBuilder
-  as_dict: CastBuilder
-  as_obj: CastBuilder
-  as_lang: CastBuilder
-  
-  // Choice builders
-  as_one: ChoiceBuilder
-  as_maybe: ChoiceBuilder
-  as_multi: ChoiceBuilder
-  as_any: ChoiceBuilder
+  as_int: CastBuilder<this>
+  as_float: CastBuilder<this>
+  as_bool: CastBuilder<this>
+  as_percent: CastBuilder<this>
+  as_lang: CastBuilder<this>
+  as_one: ChoiceBuilder<this>
+  as_maybe: ChoiceBuilder<this>
+  as_multi: ChoiceBuilder<this>
+  as_any: ChoiceBuilder<this>
 
-  constructor(parent: ChatfieldBuilder, name: string) {
+  constructor(parent: ChatfieldBuilder<Fields>, fieldName: CurrentField) {
     this.parent = parent
-    this.name = name
-    this._chatfieldField = {
-      desc: name,  // Default to field name
-      specs: {
-        must: [],
-        reject: [],
-        hint: [],
-        confidential: false,
-        conclude: false
-      } as FieldSpecs,
-      casts: {},
-      value: null
+    this.fieldName = fieldName
+    
+    // Ensure field exists
+    const fieldKey = fieldName as unknown as Fields
+    if (!(fieldKey in this.parent._chatfield.fields)) {
+      (this.parent._chatfield.fields as any)[fieldKey] = {
+        desc: '',
+        specs: {
+          must: [],
+          reject: [],
+          hint: []
+        },
+        casts: {},
+        value: null
+      }
     }
-    // Add to parent's fields
-    this.parent._chatfield.fields[name] = this._chatfieldField
-    this.parent._currentField = name
-
+    
+    this._chatfieldField = (this.parent._chatfield.fields as any)[fieldKey]
+    
+    // Set as current field
+    this.parent._currentField = fieldName as string
+    
     // Initialize cast builders
-    this.as_int = this._createCastProxy('as_int', Number, 'Parse as integer')
-    this.as_float = this._createCastProxy('as_float', Number, 'Parse as floating point number')
-    this.as_bool = this._createCastProxy('as_bool', Boolean, 'Parse as boolean')
-    this.as_str = this._createCastProxy('as_str', String, 'Format as string')
-    this.as_percent = this._createCastProxy('as_percent', Number, 'Parse as percentage (0.0 to 1.0)')
-    this.as_list = this._createCastProxy('as_list', Array, 'Parse as list/array')
-    this.as_set = this._createCastProxy('as_set', Set, 'Parse as unique set')
-    this.as_dict = this._createCastProxy('as_dict', Object, 'Parse as key-value dictionary')
-    this.as_obj = this.as_dict  // Alias
-    this.as_lang = this._createCastProxy('as_lang', String, 'Translate to {name}')
-
-    // Choice builders
-    this.as_one = this._createChoiceProxy('as_one', false, false)
-    this.as_maybe = this._createChoiceProxy('as_maybe', true, false)
-    this.as_multi = this._createChoiceProxy('as_multi', false, true)
-    this.as_any = this._createChoiceProxy('as_any', true, true)
-  }
-
-  private _createCastProxy(baseName: string, primitiveType: any, basePrompt: string): CastBuilder {
-    const builder = new CastBuilder(this, baseName, primitiveType, basePrompt)
+    this.as_int = createCastBuilder(this, 'as_int', Number, 'parse as integer')
+    this.as_float = createCastBuilder(this, 'as_float', Number, 'parse as float')
+    this.as_bool = createCastBuilder(this, 'as_bool', Boolean, 'parse as boolean')
+    this.as_percent = createCastBuilder(this, 'as_percent', Number, 'parse as percentage (0-100)')
+    this.as_lang = createCastBuilder(this, 'as_lang', String, 'translate to {name}')
     
-    return new Proxy(builder, {
-      get: (target, prop) => {
-        if (prop === 'call' || prop === 'parent' || prop === 'baseName' || prop === 'primitiveType' || prop === 'basePrompt') {
-          return target[prop as keyof CastBuilder]
-        }
-        
-        // Make it callable directly
-        if (prop === Symbol.for('nodejs.util.inspect.custom') || prop === 'then' || typeof prop === 'symbol') {
-          return undefined
-        }
-        
-        // Handle sub-attributes like as_lang.fr
-        const propStr = String(prop)
-        if (propStr.startsWith('_')) {
-          throw new Error(`No attribute ${propStr}`)
-        }
-        
-        const compoundName = `${baseName}_${propStr}`
-        const compoundPrompt = basePrompt.includes('{name}') 
-          ? basePrompt.replace('{name}', propStr)
-          : `${basePrompt} for ${propStr}`
-        
-        return (prompt?: string) => {
-          const castInfo = {
-            type: typeof primitiveType === 'function' ? primitiveType.name.toLowerCase() : String(primitiveType),
-            prompt: prompt || compoundPrompt
-          }
-          this._chatfieldField.casts[compoundName] = castInfo
-          return this
-        }
-      },
-      
-      apply: (target, _thisArg, args) => {
-        // Allow direct call like as_int()
-        return target.call(args[0])
-      }
-    }) as any
+    // Initialize choice builders
+    this.as_one = createChoiceBuilder(this, 'as_one', false, false)
+    this.as_maybe = createChoiceBuilder(this, 'as_maybe', true, false)
+    this.as_multi = createChoiceBuilder(this, 'as_multi', false, true)
+    this.as_any = createChoiceBuilder(this, 'as_any', true, true)
   }
 
-  private _createChoiceProxy(baseName: string, nullAllowed: boolean, multi: boolean): ChoiceBuilder {
-    const builder = new ChoiceBuilder(this, baseName, nullAllowed, multi)
-    
-    return new Proxy(builder, {
-      get: (target, prop) => {
-        if (prop === 'parent' || prop === 'baseName' || prop === 'null' || prop === 'multi') {
-          return target[prop as keyof ChoiceBuilder]
-        }
-        
-        // Handle sub-attributes like as_one.parity
-        const propStr = String(prop)
-        if (propStr.startsWith('_')) {
-          throw new Error(`No attribute ${propStr}`)
-        }
-        
-        const compoundName = `${baseName}_${propStr}`
-        
-        return (...choices: string[]) => {
-          const castInfo = {
-            type: 'choice',
-            prompt: `Choose for ${propStr}`,
-            choices: choices,
-            null: nullAllowed,
-            multi: multi
-          }
-          this._chatfieldField.casts[compoundName] = castInfo
-          return this
-        }
-      }
-    }) as any
-  }
-
-  desc(description: string): FieldBuilder {
+  desc(description: string): this {
     // Set field description
     this._chatfieldField.desc = description
     return this
   }
 
-  must(rule: string): FieldBuilder {
+  must(rule: string): this {
     // Add a validation requirement
+    if (!this._chatfieldField.specs.must) {
+      this._chatfieldField.specs.must = []
+    }
     this._chatfieldField.specs.must.push(rule)
     return this
   }
 
-  reject(rule: string): FieldBuilder {
+  reject(rule: string): this {
     // Add a rejection rule
+    if (!this._chatfieldField.specs.reject) {
+      this._chatfieldField.specs.reject = []
+    }
     this._chatfieldField.specs.reject.push(rule)
     return this
   }
 
-  hint(tooltip: string): FieldBuilder {
+  hint(tooltip: string): this {
     // Add helpful context
     if (!this._chatfieldField.specs.hint) {
       this._chatfieldField.specs.hint = []
@@ -321,46 +286,46 @@ export class FieldBuilder {
     return this
   }
 
-  confidential(): FieldBuilder {
+  confidential(): this {
     // Mark field as confidential (tracked silently)
     this._chatfieldField.specs.confidential = true
     return this
   }
 
-  conclude(): FieldBuilder {
+  conclude(): this {
     // Mark field for evaluation only after conversation ends (automatically confidential)
     this._chatfieldField.specs.conclude = true
     this._chatfieldField.specs.confidential = true  // Implied
     return this
   }
 
-  field(name: string): FieldBuilder {
+  field<Name extends string>(name: Name): FieldBuilder<Fields | Name, Name> {
     // Start defining a new field
     return this.parent.field(name)
   }
 
-  alice(): RoleBuilder {
+  alice(): RoleBuilder<Fields> {
     // Switch to alice configuration
     return this.parent.alice()
   }
 
-  bob(): RoleBuilder {
+  bob(): RoleBuilder<Fields> {
     // Switch to bob configuration
     return this.parent.bob()
   }
 
-  build(): Interview {
+  build(): TypedInterview<Fields> {
     // Build the final Interview
     return this.parent.build()
   }
 }
 
 /**
- * Main builder for creating Chatfield interviews.
- * Mirrors Python's ChatfieldBuilder
+ * Main builder for creating Chatfield interviews with type tracking.
+ * The Fields generic tracks all field names added during building.
  */
-export class ChatfieldBuilder {
-  _chatfield: any
+export class ChatfieldBuilder<Fields extends string = never> {
+  _chatfield: InterviewMeta<Fields>
   _currentField: string | null
   _currentRole: string | null
 
@@ -368,84 +333,84 @@ export class ChatfieldBuilder {
     this._chatfield = {
       type: '',
       desc: '',
-      roles: {},
-      fields: {}
+      roles: {
+        alice: {
+          type: null,
+          traits: [],
+          possible_traits: {}
+        },
+        bob: {
+          type: null,
+          traits: [],
+          possible_traits: {}
+        }
+      },
+      fields: {} as Record<Fields, FieldMeta>
     }
     this._currentField = null
     this._currentRole = null
   }
 
-  type(name: string): ChatfieldBuilder {
+  type(name: string): ChatfieldBuilder<Fields> {
     // Set the interview type name
     this._chatfield.type = name
     return this
   }
 
-  desc(description: string): ChatfieldBuilder {
+  desc(description: string): ChatfieldBuilder<Fields> {
     // Set the interview description
     this._chatfield.desc = description
     return this
   }
 
-  alice(): RoleBuilder {
+  alice(): RoleBuilder<Fields> {
     // Configure alice (interviewer) role
     return new RoleBuilder(this, 'alice')
   }
 
-  bob(): RoleBuilder {
+  bob(): RoleBuilder<Fields> {
     // Configure bob (interviewee) role
     return new RoleBuilder(this, 'bob')
   }
 
-  field(name: string): FieldBuilder {
-    // Define a new field
-    return new FieldBuilder(this, name)
+  field<Name extends string>(name: Name): FieldBuilder<Fields | Name, Name> {
+    // Start defining a new field, tracking its name in the type system
+    return new FieldBuilder(this as any as ChatfieldBuilder<Fields | Name>, name)
   }
 
-  build(): Interview {
-    // Build the final Interview object
-    // Create Interview instance with the built structure and override its _chatfield
-    const interview = new Interview()
-    interview._chatfield = JSON.parse(JSON.stringify(this._chatfield))  // Deep copy
-
-    // Ensure roles are properly initialized with defaults
-    if (!('alice' in interview._chatfield.roles)) {
-      interview._chatfield.roles.alice = {
-        type: 'Agent',
-        traits: [],
-        possible_traits: {}
-      }
-    }
-    if (!('bob' in interview._chatfield.roles)) {
-      interview._chatfield.roles.bob = {
-        type: 'User',
-        traits: [],
-        possible_traits: {}
-      }
-    }
-
-    // Ensure possible_traits dict exists for each role
-    for (const role of Object.values(interview._chatfield.roles) as any[]) {
-      if (!('possible_traits' in role)) {
-        role.possible_traits = {}
-      }
-    }
-
-    return interview
+  build(): TypedInterview<Fields> {
+    // Build the final Interview with known field names
+    const interview = new Interview(
+      this._chatfield.type,
+      this._chatfield.desc,
+      this._chatfield.roles,
+      this._chatfield.fields
+    )
+    return interview as TypedInterview<Fields>
   }
 }
 
 /**
- * Create a new Chatfield builder.
- * Mirrors Python's chatfield()
+ * Type-safe Interview with known field names
  */
-export function chatfield(): ChatfieldBuilder {
-  return new ChatfieldBuilder()
+export type TypedInterview<Fields extends string> = Interview & {
+  [K in Fields]: string  // Each field is accessible as a string property
 }
 
-// Re-export the new type-safe versions
-export { chatfield as chatfieldV2, chatfieldDynamic, TypedInterview } from './builder-v2'
-export type { InterviewMeta, FieldSpecs, FieldMeta, RoleMeta, TraitBuilder as TraitBuilderInterface, CastBuilder as CastBuilderInterface } from './builder-types'
+/**
+ * Main entry point - creates a new type-safe builder
+ * @returns A new ChatfieldBuilder instance
+ */
+export function chatfield<Fields extends string = never>(): ChatfieldBuilder<Fields> {
+  return new ChatfieldBuilder<Fields>()
+}
+
+/**
+ * Loose type version for dynamic field names (Python-like experience)
+ */
+export function chatfieldDynamic(): ChatfieldBuilder<string> {
+  return new ChatfieldBuilder<string>()
+}
 
 /**
  * Preset builders for common patterns
@@ -455,12 +420,12 @@ export type { InterviewMeta, FieldSpecs, FieldMeta, RoleMeta, TraitBuilder as Tr
  * Create a patient, thorough gatherer.
  * Mirrors Python's patient_gatherer()
  */
-export function patientGatherer(): ChatfieldBuilder {
-  const builder = chatfield()
+export function patientGatherer(): ChatfieldBuilder<string> {
+  const builder = chatfield<string>()
     .alice()
-  builder.trait.call("patient and thorough")
-  builder.trait.call("asks follow-up questions when answers seem incomplete")
-  builder.trait.call("provides helpful examples when users seem confused")
+  builder.trait('Takes time to understand')
+  builder.trait('Asks clarifying questions when responses are unclear or incomplete')
+  builder.trait('Guides the conversation with gentle suggestions if needed')
   return builder.parent
 }
 
@@ -468,12 +433,12 @@ export function patientGatherer(): ChatfieldBuilder {
  * Create a quick, efficient gatherer.
  * Mirrors Python's quick_gatherer()
  */
-export function quickGatherer(): ChatfieldBuilder {
-  const builder = chatfield()
+export function quickGatherer(): ChatfieldBuilder<string> {
+  const builder = chatfield<string>()
     .alice()
-  builder.trait.call("concise and efficient")
-  builder.trait.call("accepts brief answers when they meet requirements")
-  builder.trait.call("moves quickly through fields")
+  builder.trait('Gets to the point quickly')
+  builder.trait('Focuses on essential information without extra conversation')
+  builder.trait('Efficient and business-like')
   return builder.parent
 }
 
@@ -481,11 +446,11 @@ export function quickGatherer(): ChatfieldBuilder {
  * Create an expert consultation gatherer.
  * Mirrors Python's expert_gatherer()
  */
-export function expertGatherer(): ChatfieldBuilder {
-  const builder = chatfield()
+export function expertGatherer(): ChatfieldBuilder<string> {
+  const builder = chatfield<string>()
     .alice()
-  builder.trait.call("assumes domain expertise")
-  builder.trait.call("asks detailed technical questions")
-  builder.trait.call("expects comprehensive, specific answers")
+  builder.trait('Acts as a domain expert')
+  builder.trait('Provides context and education during the conversation')
+  builder.trait('Can explain complex topics when relevant to the discussion')
   return builder.parent
 }
