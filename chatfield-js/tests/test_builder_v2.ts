@@ -59,17 +59,16 @@ describe('TypeSafe Builder Tests', () => {
   })
   
   test('test_sub_attribute_casts', () => {
-    const builder = chatfield()
+    const instance = chatfield()
       .type('WithSubCasts')
       .field('description')
         .desc('Description')
-    
+        .as_lang('fr', 'Translate to French')
+        .as_lang('es', 'Translate to Spanish')
+      .build()
     // TypeScript needs explicit type assertions for dynamic sub-attributes
-    const fieldBuilder = builder as any
-    fieldBuilder.as_lang.fr('Translate to French')
-    fieldBuilder.as_lang.es('Translate to Spanish')
+    // const fieldBuilder = builder as any
     
-    const instance = fieldBuilder.build()
     const meta = instance._chatfield
     expect(meta.fields.description?.casts.as_lang_fr).toBeDefined()
     expect(meta.fields.description?.casts.as_lang_es).toBeDefined()
@@ -80,15 +79,15 @@ describe('TypeSafe Builder Tests', () => {
       .type('WithChoices')
       .field('priority')
         .desc('Priority level')
-        .as_one('low', 'medium', 'high')
+        .as_one('label', 'low', 'medium', 'high')
       .field('features')
         .desc('Selected features')
-        .as_multi('feature1', 'feature2', 'feature3')
+        .as_multi('selected', 'feature1', 'feature2', 'feature3')
       .build()
     
     const meta = instance._chatfield
-    expect(meta.fields.priority?.casts.as_one?.choices).toEqual(['low', 'medium', 'high'])
-    expect(meta.fields.features?.casts.as_multi?.multi).toBe(true)
+    expect(meta.fields.priority?.casts.as_one_label?.choices).toEqual(['low', 'medium', 'high'])
+    expect(meta.fields.features?.casts.as_multi_selected?.choices).toEqual(['feature1', 'feature2', 'feature3'])
   })
   
   test('test_confidential_and_conclude', () => {
