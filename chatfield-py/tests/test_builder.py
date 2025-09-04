@@ -214,8 +214,8 @@ class TestFieldTransformations:
             .type("MultiLangInterview")
             .field("greeting")
                 .desc("Say hello")
-                .as_lang.fr()
-                .as_lang.es()
+                .as_lang('fr')
+                .as_lang('es')
             .build())
         
         field_casts = instance._chatfield['fields']['greeting']['casts']
@@ -228,8 +228,8 @@ class TestFieldTransformations:
             .type("CustomTransform")
             .field("number")
                 .desc("A number")
-                .as_bool.even("True if even")
-                .as_str.uppercase("In uppercase")
+                .as_bool('even', "True if even")
+                .as_str('uppercase', "In uppercase")
             .build())
         
         field_casts = instance._chatfield['fields']['number']['casts']
@@ -242,25 +242,46 @@ class TestFieldTransformations:
             .type("ChoiceInterview")
             .field("color")
                 .desc("Favorite color")
-                .as_one.selection("red", "green", "blue")
+                .as_one('selection', "red", "green", "blue")
             .field("priority")
                 .desc("Priority level")
-                .as_maybe.selection("low", "medium", "high")
+                .as_maybe('selection', "low", "medium", "high")
             .field("languages")
                 .desc("Programming languages")
-                .as_multi.selection("python", "javascript", "rust")
+                .as_multi('selection', "python", "javascript", "rust")
             .field("reviewers")
                 .desc("Code reviewers")
-                .as_any.selection("alice", "bob", "charlie")
+                .as_any('selection', "alice", "bob", "charlie")
             .build())
         
-        # Note: The builder uses different names for choice casts
+        # Verify choice casts were created correctly
         color_cast = instance._chatfield['fields']['color']['casts'].get('as_one_selection')
-        if color_cast:
-            assert color_cast['type'] == 'choice'
-            assert color_cast['choices'] == ['red', 'green', 'blue']
-            assert color_cast['null'] is False
-            assert color_cast['multi'] is False
+        assert color_cast is not None
+        assert color_cast['type'] == 'choice'
+        assert color_cast['choices'] == ['red', 'green', 'blue']
+        assert color_cast['null'] is False
+        assert color_cast['multi'] is False
+        
+        priority_cast = instance._chatfield['fields']['priority']['casts'].get('as_maybe_selection')
+        assert priority_cast is not None
+        assert priority_cast['type'] == 'choice'
+        assert priority_cast['choices'] == ['low', 'medium', 'high']
+        assert priority_cast['null'] is True
+        assert priority_cast['multi'] is False
+        
+        lang_cast = instance._chatfield['fields']['languages']['casts'].get('as_multi_selection')
+        assert lang_cast is not None
+        assert lang_cast['type'] == 'choice'
+        assert lang_cast['choices'] == ['python', 'javascript', 'rust']
+        assert lang_cast['null'] is False
+        assert lang_cast['multi'] is True
+        
+        reviewer_cast = instance._chatfield['fields']['reviewers']['casts'].get('as_any_selection')
+        assert reviewer_cast is not None
+        assert reviewer_cast['type'] == 'choice'
+        assert reviewer_cast['choices'] == ['alice', 'bob', 'charlie']
+        assert reviewer_cast['null'] is True
+        assert reviewer_cast['multi'] is True
 
 
 class TestSpecialFields:

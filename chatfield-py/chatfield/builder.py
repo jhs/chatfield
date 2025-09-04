@@ -80,71 +80,94 @@ class RoleBuilder:
 
 
 class CastBuilder:
-    """Builder for cast decorators with sub-attributes."""
+    """Builder for cast decorators with function-based API."""
     
-    def __init__(self, parent: 'FieldBuilder', base_name: str, primitive_type: type, base_prompt: str):
+    def __init__(self, parent: 'FieldBuilder', base_name: str, primitive_type: type, base_prompt: str, requires_sub_name: bool = False):
         self.parent = parent
         self.base_name = base_name
         self.primitive_type = primitive_type
         self.base_prompt = base_prompt
+        self.requires_sub_name = requires_sub_name
     
-    def __call__(self, prompt: Optional[str] = None):
-        """Apply the base cast."""
+    def __call__(self, *args):
+        """Apply cast with optional sub-name and prompt.
+        
+        Usage:
+        - as_int() or as_int('Parse as age')
+        - as_lang('fr') or as_lang('fr', 'Translate to French')
+        - as_bool() or as_bool('is_even', 'True if even')
+        """
+        if self.requires_sub_name:
+            # Mandatory sub-name (like as_lang)
+            if len(args) == 0:
+                raise ValueError(f"{self.base_name} requires a sub-name parameter")
+            sub_name = str(args[0])
+            prompt = args[1] if len(args) > 1 else self.base_prompt.format(name=sub_name) if '{name}' in self.base_prompt else f'{self.base_prompt} for {sub_name}'
+            cast_name = f'{self.base_name}_{sub_name}'
+        else:
+            # Optional sub-name (like as_bool)
+            if len(args) == 0:
+                # No arguments - use base cast
+                cast_name = self.base_name
+                prompt = self.base_prompt
+            elif len(args) == 1:
+                # One argument - could be prompt or sub-name
+                # If it looks like a prompt (has spaces or capitals), treat as prompt
+                arg = str(args[0])
+                if ' ' in arg or any(c.isupper() for c in arg):
+                    # It's a prompt for the base cast
+                    cast_name = self.base_name
+                    prompt = arg
+                else:
+                    # It's a sub-name
+                    cast_name = f'{self.base_name}_{arg}'
+                    prompt = self.base_prompt.format(name=arg) if '{name}' in self.base_prompt else f'{self.base_prompt} for {arg}'
+            else:
+                # Two or more arguments - first is sub-name, second is prompt
+                sub_name = str(args[0])
+                prompt = str(args[1])
+                cast_name = f'{self.base_name}_{sub_name}'
+        
         cast_info = {
             'type': self.primitive_type.__name__,
-            'prompt': prompt or self.base_prompt
+            'prompt': prompt
         }
-        self.parent._chatfield_field['casts'][self.base_name] = cast_info
+        self.parent._chatfield_field['casts'][cast_name] = cast_info
         return self.parent
-    
-    def __getattr__(self, name: str):
-        """Handle sub-attributes like as_lang.fr."""
-        if name.startswith('_'):
-            raise AttributeError(f"No attribute {name}")
-        
-        compound_name = f'{self.base_name}_{name}'
-        compound_prompt = self.base_prompt.format(name=name) if '{name}' in self.base_prompt else f'{self.base_prompt} for {name}'
-        
-        def sub_cast(prompt: Optional[str] = None):
-            cast_info = {
-                'type': self.primitive_type.__name__,
-                'prompt': prompt or compound_prompt
-            }
-            self.parent._chatfield_field['casts'][compound_name] = cast_info
-            return self.parent
-        
-        return sub_cast
 
 
 class ChoiceBuilder:
-    """Builder for choice cardinality decorators."""
+    """Builder for choice cardinality with function-based API."""
     
     def __init__(self, parent: 'FieldBuilder', base_name: str, null: bool, multi: bool):
         self.parent = parent
         self.base_name = base_name
-        # TODO: These do not drive any implementation. I think the logic checks the key name for ^as_one_, etc.
         self.null = null
         self.multi = multi
     
-    def __getattr__(self, name: str):
-        """Handle sub-attributes like as_one.parity."""
-        if name.startswith('_'):
-            raise AttributeError(f"No attribute {name}")
+    def __call__(self, *args):
+        """Apply choice cast.
         
-        compound_name = f'{self.base_name}_{name}'
+        Usage:
+        - as_one('selection', 'red', 'green', 'blue')
+        - as_multi('tags', 'python', 'javascript', 'rust')
+        """
+        if len(args) < 2:
+            raise ValueError(f"{self.base_name} requires a sub-name and at least one choice")
         
-        def choice_cast(*choices):
-            cast_info = {
-                'type': 'choice',
-                'prompt': f"Choose for {name}",
-                'choices': list(choices),
-                'null': self.null,
-                'multi': self.multi
-            }
-            self.parent._chatfield_field['casts'][compound_name] = cast_info
-            return self.parent
+        sub_name = str(args[0])
+        choices = [str(arg) for arg in args[1:]]
         
-        return choice_cast
+        cast_name = f'{self.base_name}_{sub_name}'
+        cast_info = {
+            'type': 'choice',
+            'prompt': f"Choose for {sub_name}",
+            'choices': choices,
+            'null': self.null,
+            'multi': self.multi
+        }
+        self.parent._chatfield_field['casts'][cast_name] = cast_info
+        return self.parent
 
 
 class FieldBuilder:
@@ -170,16 +193,16 @@ class FieldBuilder:
         self.parent._current_field = name
         
         # Initialize cast builders
-        self.as_int = CastBuilder(self, 'as_int', int, 'Parse as integer')
-        self.as_float = CastBuilder(self, 'as_float', float, 'Parse as floating point number')
-        self.as_bool = CastBuilder(self, 'as_bool', bool, 'Parse as boolean')
-        self.as_str = CastBuilder(self, 'as_str', str, 'Format as string')
-        self.as_percent = CastBuilder(self, 'as_percent', float, 'Parse as percentage (0.0 to 1.0)')
-        self.as_list = CastBuilder(self, 'as_list', list, 'Parse as list/array')
-        self.as_set = CastBuilder(self, 'as_set', set, 'Parse as unique set')
-        self.as_dict = CastBuilder(self, 'as_dict', dict, 'Parse as key-value dictionary')
+        self.as_int = CastBuilder(self, 'as_int', int, 'Parse as integer', requires_sub_name=False)
+        self.as_float = CastBuilder(self, 'as_float', float, 'Parse as floating point number', requires_sub_name=False)
+        self.as_bool = CastBuilder(self, 'as_bool', bool, 'Parse as boolean', requires_sub_name=False)
+        self.as_str = CastBuilder(self, 'as_str', str, 'Format as string', requires_sub_name=False)
+        self.as_percent = CastBuilder(self, 'as_percent', float, 'Parse as percentage (0.0 to 1.0)', requires_sub_name=False)
+        self.as_list = CastBuilder(self, 'as_list', list, 'Parse as list/array', requires_sub_name=False)
+        self.as_set = CastBuilder(self, 'as_set', set, 'Parse as unique set', requires_sub_name=False)
+        self.as_dict = CastBuilder(self, 'as_dict', dict, 'Parse as key-value dictionary', requires_sub_name=False)
         self.as_obj = self.as_dict  # Alias
-        self.as_lang = CastBuilder(self, 'as_lang', str, 'Translate to {name}')
+        self.as_lang = CastBuilder(self, 'as_lang', str, 'Translate to {name}', requires_sub_name=True)
         
         # Choice builders
         self.as_one = ChoiceBuilder(self, 'as_one', null=False, multi=False)

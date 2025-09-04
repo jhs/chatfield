@@ -35,7 +35,7 @@ export class Interview {
   constructor(type?: string, desc?: string, roles?: any, fields?: any) {
     // Initialize with default structure matching Python
     this._chatfield = {
-      type: type || this.constructor.name,
+      type: type || '',
       desc: desc || '',
       roles: roles || {
         alice: {
