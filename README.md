@@ -11,6 +11,7 @@ Chatfield provides implementations in both Python and TypeScript/JavaScript, all
 - **Natural Conversations**: Replace traditional forms with engaging dialogues
 - **LLM-Powered Validation**: Smart validation and guidance through conversation
 - **Type Safety**: Full type support in both Python and TypeScript
+- **Rich Transformations**: Convert responses into any data type with casts
 - **Framework Integration**: React components, CopilotKit support, and more
 - **Flexible APIs**: Multiple API styles to suit different preferences
 
@@ -68,6 +69,109 @@ const result = await BugReport.gather()
 console.log(result.steps, result.expected, result.actual)
 ```
 
+## Type Transformations (Casts)
+
+Transform conversational responses into any data type you need:
+
+### Basic Transformations
+
+```python
+from chatfield import chatfield
+
+project_estimate = (chatfield()
+    .type("Project Estimate")
+    .desc("Project estimation")
+    
+    .field("team_size")
+        .desc("Number of developers")
+        .as_int()  # Parse to integer
+        .must("between 1 and 50")
+    
+    .field("confidence")
+        .desc("Confidence in timeline")
+        .as_percent()  # Parse to 0.0-1.0
+    
+    .field("technologies")
+        .desc("Tech stack you'll use")
+        .as_list()  # Parse to list
+    
+    .field("needs_design")
+        .desc("Need design resources?")
+        .as_bool()  # Parse to boolean
+    
+    .build())
+
+# After collection:
+project_estimate.team_size.as_int      # 5 (int)
+project_estimate.confidence.as_percent # 0.75 (float)
+project_estimate.technologies.as_list  # ["Python", "React", "PostgreSQL"]
+project_estimate.needs_design.as_bool  # True (bool)
+```
+
+### Advanced Transformations
+
+Casts can have multiple transformations with custom parameters:
+
+```python
+feature_request = (chatfield()
+    .type("Feature Request")
+    
+    .field("affected_users")
+        .desc("Number of users impacted")
+        .as_int()  # Base integer cast
+        .as_lang('fr')  # Translate to French
+        .as_lang('es')  # Translate to Spanish
+        .as_bool('even', 'True if even number')  # Custom boolean
+        .as_bool('critical', 'True if > 100 users')  # Another boolean
+        .as_str('uppercase', 'In all caps')  # String format
+        .as_set('factors', 'Prime factors')  # Set operation
+    
+    .build())
+
+# After collection, if user said "two hundred":
+feature_request.affected_users                  # "200" (base string)
+feature_request.affected_users.as_int           # 200
+feature_request.affected_users.as_lang_fr       # "deux cents"
+feature_request.affected_users.as_lang_es       # "doscientos"
+feature_request.affected_users.as_bool_even     # True
+feature_request.affected_users.as_bool_critical # True
+feature_request.affected_users.as_str_uppercase # "TWO HUNDRED"
+feature_request.affected_users.as_set_factors   # {2, 5}
+```
+
+### Choice Cardinality
+
+Control how many options can be selected:
+
+```python
+task_assignment = (chatfield()
+    .type("Task Assignment")
+    
+    .field("task_type")
+        .desc("Type of task")
+        .as_one('selection', 'bug', 'feature', 'enhancement')
+    
+    .field("priority")
+        .desc("Priority level (if known)")
+        .as_maybe('level', 'low', 'medium', 'high', 'critical')
+    
+    .field("components")
+        .desc("Affected components")
+        .as_multi('systems', 'frontend', 'backend', 'database')
+    
+    .field("reviewers")
+        .desc("Optional reviewers")
+        .as_any('people', 'Alice', 'Bob', 'Charlie', 'Diana')
+    
+    .build())
+
+# After collection:
+task_assignment.task_type.as_one_selection    # "bug"
+task_assignment.priority.as_maybe_level       # "high" or None
+task_assignment.components.as_multi_systems   # {"frontend", "backend"}
+task_assignment.reviewers.as_any_people       # {"Alice", "Diana"} or set()
+```
+
 ## Project Structure
 
 This repository contains two parallel implementations:
@@ -100,10 +204,10 @@ npm install
 
 ## Documentation
 
-- [Python Documentation](./chatfield-py/README.md)
-- [TypeScript/JavaScript Documentation](./chatfield-js/README.md)
-- [Python Examples](./chatfield-py/examples/)
-- [TypeScript Examples](./chatfield-js/examples/)
+- [Python Documentation](./chatfield-py/README.md) - Full API reference and advanced features
+- [TypeScript/JavaScript Documentation](./chatfield-js/README.md) - React integration and builder patterns
+- [Python Examples](./chatfield-py/examples/) - Working examples with all features
+- [TypeScript Examples](./chatfield-js/examples/) - Framework integration examples
 
 ## Development
 
