@@ -5,7 +5,7 @@
 
 import { chatfield } from '../src/builder'
 
-describe.skip('TestBasicBuilder', () => {
+describe('TestBasicBuilder', () => {
 // describe('TestBasicBuilder', () => {
   test('test_simple_interview', () => {
     const instance = chatfield()
@@ -90,7 +90,7 @@ describe.skip('TestBasicBuilder', () => {
   })
 })
 
-describe.skip('TestRoleConfiguration', () => {
+describe('TestRoleConfiguration', () => {
   test('test_alice_role', () => {
     const instance = chatfield()
       .type('WithAlice')
@@ -180,7 +180,7 @@ describe.skip('TestRoleConfiguration', () => {
   })
 })
 
-describe.skip('TestFieldTransformations', () => {
+describe('TestFieldTransformations', () => {
   test('test_type_transformations', () => {
     const instance = chatfield()
       .type('TypedInterview')
@@ -260,7 +260,7 @@ describe.skip('TestFieldTransformations', () => {
   })
 })
 
-describe.skip('TestSpecialFields', () => {
+describe('TestSpecialFields', () => {
   test('test_confidential_field', () => {
     const instance = chatfield()
       .type('ConfidentialInterview')
@@ -287,7 +287,7 @@ describe.skip('TestSpecialFields', () => {
   })
 })
 
-describe.skip('TestBuilderEdgeCases', () => {
+describe('TestBuilderEdgeCases', () => {
   test('test_empty_interview', () => {
     const instance = chatfield()
       .type('Empty')
