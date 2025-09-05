@@ -3,9 +3,9 @@
  * Mirrors Python's test_interview.py
  */
 
-import { chatfield } from '../src/builders/gatherer-builder'
-import { Interview } from '../src/core/interview'
-import { FieldProxy } from '../src/core/field-proxy'
+import { chatfield } from '../src/builder'
+import { Interview } from '../src/interview'
+import { FieldProxy } from '../src/field-proxy'
 
 describe('TestInterviewBasics', () => {
   test('test_simple_interview_creation', () => {
@@ -168,10 +168,10 @@ describe('TestInterviewWithFeatures', () => {
       .type('MultiLangInterview')
       .field('number')
         .desc('A number')
-        .as_lang.fr()
-        .as_lang.es()
-        .as_bool.even('True if even')
-        .as_str.uppercase('In uppercase')
+        .as_lang('fr')
+        .as_lang('es')
+        .as_bool('even', 'True if even')
+        .as_str('uppercase', 'In uppercase')
       .build()
     const fieldCasts = interview._chatfield.fields.number.casts
 
@@ -186,16 +186,16 @@ describe('TestInterviewWithFeatures', () => {
       .type('ChoiceInterview')
       .field('color')
         .desc('Favorite color')
-        .as_one.color('red', 'green', 'blue')
+        .as_one('color', 'red', 'green', 'blue')
       .field('priority')
         .desc('Priority level')
         .as_maybe.priority('low', 'medium', 'high')
       .field('languages')
         .desc('Programming languages')
-        .as_multi.languages('python', 'javascript', 'rust')
+        .as_multi('languages', 'python', 'javascript', 'rust')
       .field('reviewers')
         .desc('Code reviewers')
-        .as_any.reviewers('alice', 'bob', 'charlie')
+        .as_any('reviewers', 'alice', 'bob', 'charlie')
       .build()
 
     const colorCast = interview._chatfield.fields.color.casts.as_one_color
@@ -246,8 +246,8 @@ describe('TestFieldProxy', () => {
       .field('number')
         .desc('A number')
         .as_int()
-        .as_lang.fr()
-        .as_bool.even('True if even')
+        .as_lang('fr')
+        .as_bool('even', 'True if even')
       .build()
     interview._chatfield.fields.number.value = {
       value: '42',
