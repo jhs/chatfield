@@ -1,6 +1,5 @@
 """Unit tests for Chatfield builder pattern."""
 
-import pytest
 from chatfield import chatfield
 
 

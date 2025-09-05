@@ -4,8 +4,6 @@
  */
 
 import { chatfield } from '../src/builder'
-// import { MockLLMBackend } from '../src/backends/llm-backend' // Removed - use Interviewer mock
-// import { Interviewer } from '../src/core/interviewer'
 
 describe('Custom Transformations', () => {
   test('multiple custom transformations on same field', () => {

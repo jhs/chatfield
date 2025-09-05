@@ -19,7 +19,6 @@
 
 import { chatfield } from '../src/builders/gatherer-builder'
 import { Interviewer } from '../src/core/interviewer'
-import { FieldProxy } from '../src/core/field-proxy'
 import * as readline from 'readline'
 import * as process from 'process'
 
