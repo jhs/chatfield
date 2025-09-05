@@ -41,16 +41,16 @@ class TestRestaurantOrderConversation:
             
             .field("starter")
                 .desc("starter or appetizer")
-                .as_one.selection("Sir Digby Chicken Caesar", "Shrimp cocktail", "Garden salad")
+                .as_one('selection',"Sir Digby Chicken Caesar", "Shrimp cocktail", "Garden salad")
             
             .field("main_course")
                 .desc("Main course")
                 .hint("Choose from: Grilled salmon, Veggie pasta, Beef tenderloin, Chicken parmesan")
-                .as_one.selection("Grilled salmon", "Veggie pasta", "Beef tenderloin", "Chicken parmesan")
+                .as_one('selection', "Grilled salmon", "Veggie pasta", "Beef tenderloin", "Chicken parmesan")
             
             .field("dessert")
                 .desc("Mandatory dessert; choices: Cheesecake, Chocolate mousse, Fruit sorbet")
-                .as_one.selection("Cheesecake", "Chocolate mousse", "Fruit sorbet")
+                .as_one('selection', "Cheesecake", "Chocolate mousse", "Fruit sorbet")
             
             .build())
     
@@ -243,8 +243,8 @@ class TestNumberConversation:
                 .desc("Your favorite number between 1 and 100")
                 .must("a number between 1 and 100")
                 .as_int()
-                .as_bool.even("True if even, False if odd")
-                .as_one.parity("even", "odd")
+                .as_bool('even', "True if even, False if odd")
+                .as_one('parity', "even", "odd")
             
             .build())
     
