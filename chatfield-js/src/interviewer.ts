@@ -305,7 +305,9 @@ export class Interviewer {
       if (field.specs) {
         for (const [specType, rules] of Object.entries(field.specs)) {
           for (const rule of rules) {
-            specs.push(`    - ${specType}: ${rule}`)
+            // The specType should be capitalized.
+            const specLabel = specType.charAt(0).toUpperCase() + specType.slice(1)
+            specs.push(`    - ${specLabel}: ${rule}`)
           }
         }
       }
