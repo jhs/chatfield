@@ -22,36 +22,7 @@ import { ChatOpenAI } from '@langchain/openai'
 import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
-
-/**
- * Interview base class (simplified version for TypeScript)
- */
-export interface Interview {
-  _name(): string
-  _fields(): string[]
-  _alice_role_name(): string
-  _bob_role_name(): string
-  _alice_role(): { type?: string; traits: string[] }
-  _bob_role(): { type?: string; traits: string[] }
-  _done: boolean
-  _chatfield: {
-    type: string
-    desc?: string
-    roles: {
-      alice: { type?: string; traits: string[] }
-      bob: { type?: string; traits: string[] }
-    }
-    fields: Record<string, {
-      desc?: string
-      specs?: Record<string, string[]>
-      casts?: Record<string, any>
-      value?: any
-    }>
-  }
-  _get_chat_field(name: string): any
-  _copy_from(other: Interview): void
-  _pretty(): string
-}
+import { Interview } from './interview'
 
 /**
  * State type for LangGraph conversation
@@ -91,28 +62,33 @@ function mergeInterviews(a: Interview, b: Interview): Interview {
  * Interviewer class that orchestrates conversations using LangGraph
  */
 export class Interviewer {
-  private interview: Interview
-  private graph: any
-  private config: any
-  private llm: ChatOpenAI
+  interview: Interview  // Made public for test access
+  graph: any  // Made public for test access
+  config: any  // Made public for test access
+  llm: ChatOpenAI  // Made public for test access
+  llm_with_both!: ChatOpenAI  // Added for Python compatibility
+  checkpointer: MemorySaver  // Made public for test access
   private llmWithTools!: ChatOpenAI
-  private checkpointer: MemorySaver
   private toolName: string
 
-  constructor(interview: Interview, threadId?: string) {
+  constructor(interview: Interview, options?: { threadId?: string; llmBackend?: any }) {
     this.interview = interview
     this.checkpointer = new MemorySaver()
     this.config = {
       configurable: {
-        thread_id: threadId || uuidv4()
+        thread_id: options?.threadId || uuidv4()
       }
     }
 
-    // Initialize LLM
-    this.llm = new ChatOpenAI({
-      modelName: 'gpt-4o',
-      temperature: 0.0
-    })
+    // Initialize LLM (use mock if provided)
+    if (options?.llmBackend) {
+      this.llm = options.llmBackend
+    } else {
+      this.llm = new ChatOpenAI({
+        modelName: 'gpt-4o',
+        temperature: 0.0
+      })
+    }
 
     // Setup tools and graph
     this.toolName = `update_${this.interview._name()}`
@@ -126,53 +102,37 @@ export class Interviewer {
     // Create tool for updating interview fields
     const toolDescription = `Record valid information stated by the ${theBob} about the ${this.interview._name()}`
     
-    // Build Zod schema for tool arguments dynamically
-    const fieldSchemas: Record<string, any> = {}
-    
-    for (const fieldName of this.interview._fields()) {
-      const field = this.interview._chatfield.fields[fieldName]
+    // Create a simple tool function without complex Zod schemas to avoid deep type issues
+    const updateToolFunc = async (args: any) => {
+      console.log('Tool called with:', args)
       
-      // Create schema for this field
-      const fieldSchema = z.object({
-        value: z.string().describe('The most typical valid representation'),
-        context: z.string().describe('Conversational context'),
-        as_quote: z.string().describe(`Direct quote from ${theBob}`)
-      }).optional()
-      
-      fieldSchemas[fieldName] = fieldSchema
-    }
-
-    const toolSchema = z.object(fieldSchemas)
-
-    // Create the tool with simplified schema
-    const updateTool = tool(
-      async (args: any) => {
-        console.log('Tool called with:', args)
-        
-        try {
-          // Process the tool input
-          for (const [fieldName, fieldValue] of Object.entries(args)) {
-            if (fieldValue && typeof fieldValue === 'object') {
-              console.log(`Setting field ${fieldName}:`, fieldValue)
-              if (this.interview._chatfield.fields[fieldName]) {
-                this.interview._chatfield.fields[fieldName].value = fieldValue
-              }
+      try {
+        // Process the tool input
+        for (const [fieldName, fieldValue] of Object.entries(args)) {
+          if (fieldValue && typeof fieldValue === 'object') {
+            console.log(`Setting field ${fieldName}:`, fieldValue)
+            if (this.interview._chatfield.fields[fieldName]) {
+              this.interview._chatfield.fields[fieldName].value = fieldValue as any
             }
           }
-          return 'Success'
-        } catch (error: any) {
-          return `Error: ${error.message}`
         }
-      },
-      {
-        name: this.toolName,
-        description: toolDescription,
-        schema: z.record(z.any()) // Simplified schema to avoid deep instantiation
+        return 'Success'
+      } catch (error: any) {
+        return `Error: ${error.message}`
       }
-    )
+    }
+
+    // Create the tool with simplified schema to avoid TypeScript deep instantiation issues
+    const updateTool = {
+      name: this.toolName,
+      description: toolDescription,
+      schema: z.record(z.any()), // Simplified schema
+      func: updateToolFunc
+    } as any
 
     // Bind tools to LLM
-    this.llmWithTools = this.llm.bindTools([updateTool]) as ChatOpenAI
+    this.llmWithTools = this.llm.bindTools ? this.llm.bindTools([updateTool]) as ChatOpenAI : this.llm
+    this.llm_with_both = this.llmWithTools  // Python compatibility
 
     // Build the state graph
     const builder = new StateGraph(InterviewState)
@@ -384,16 +344,67 @@ export class Interviewer {
       if (bobTraits) aliceAndBob += bobTraits
     }
     
-    const useTools = ` Use tools to record information fields when you identify valid information to collect.`
+    // Add description section if provided
+    let descriptionSection = ''
+    if (interview._chatfield.desc) {
+      descriptionSection = `\n## Description\n${interview._chatfield.desc}\n\n## Fields to Collect\n`
+    }
     
-    return `You are the conversational ${theAlice} focused on gathering key information in conversation with the ${theBob}, into a collection called ${collectionName}, detailed below.${withTraits}${useTools} Although the ${theBob} may take the conversation anywhere, your response must fit the conversation and your respective roles while refocusing the discussion so that you can gather clear key ${collectionName} information from the ${theBob}.${aliceAndBob}
+    return `You are the conversational ${theAlice} focused on gathering key information in conversation with the ${theBob}, detailed below.${withTraits} As soon as you encounter relevant information in conversation, immediately use tools to record information fields and their related "casts", which are cusom conversions you provide for each field. Although the ${theBob} may take the conversation anywhere, your response must fit the conversation and your respective roles while refocusing the discussion so that you can gather clear key ${collectionName} information from the ${theBob}.${aliceAndBob}
 
 ----
 
 # Collection: ${collectionName}
-
+${descriptionSection}
 ${fields.join('\n\n')}
 `
+  }
+
+  /**
+   * Generate system prompt for the conversation (Python compatibility)
+   */
+  mk_system_prompt(state: { interview: Interview }): string {
+    return this.makeSystemPrompt({ interview: state.interview, messages: [] } as any)
+  }
+
+  /**
+   * Process tool input and update interview state (Python compatibility)
+   */
+  process_tool_input(interview: Interview, toolArgs: Record<string, any>) {
+    // Process the tool input
+    for (const [fieldName, fieldValue] of Object.entries(toolArgs)) {
+      if (fieldValue && typeof fieldValue === 'object') {
+        // Handle transformation renaming (choose_exactly_one_as_* -> as_one_as_*)
+        const processedValue = { ...fieldValue }
+        
+        // Rename transformation keys
+        for (const [key, value] of Object.entries(fieldValue)) {
+          if (key.startsWith('choose_exactly_one_')) {
+            const newKey = key.replace('choose_exactly_one_', 'as_one_')
+            processedValue[newKey] = value
+            delete processedValue[key]
+          } else if (key.startsWith('choose_zero_or_one_')) {
+            const newKey = key.replace('choose_zero_or_one_', 'as_maybe_')
+            processedValue[newKey] = value
+            delete processedValue[key]
+          } else if (key.startsWith('choose_one_or_more_')) {
+            const newKey = key.replace('choose_one_or_more_', 'as_multi_')
+            processedValue[newKey] = value
+            delete processedValue[key]
+          } else if (key.startsWith('choose_zero_or_more_')) {
+            const newKey = key.replace('choose_zero_or_more_', 'as_any_')
+            processedValue[newKey] = value
+            delete processedValue[key]
+          }
+        }
+        
+        if (interview._chatfield.fields[fieldName]) {
+          interview._chatfield.fields[fieldName].value = processedValue
+        }
+      }
+    }
+    
+    // _done is computed automatically based on field values
   }
 
   /**

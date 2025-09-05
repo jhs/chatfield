@@ -71,14 +71,14 @@ export class Interview {
    * Get alice role name
    */
   _alice_role_name(): string {
-    return this._chatfield.roles.alice.type
+    return this._chatfield.roles.alice.type || 'Agent'
   }
 
   /**
    * Get bob role name
    */
   _bob_role_name(): string {
-    return this._chatfield.roles.bob.type
+    return this._chatfield.roles.bob.type || 'User'
   }
 
   /**
