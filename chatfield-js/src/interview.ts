@@ -82,6 +82,20 @@ export class Interview {
   }
 
   /**
+   * Get alice role details (method version for Python compatibility)
+   */
+  _alice_role(): { type?: string; traits: string[] } {
+    return this._chatfield.roles.alice
+  }
+
+  /**
+   * Get bob role details (method version for Python compatibility)
+   */
+  _bob_role(): { type?: string; traits: string[] } {
+    return this._chatfield.roles.bob
+  }
+
+  /**
    * Get alice role details
    */
   get _alice(): { type: string; traits: string[] } {
@@ -139,6 +153,20 @@ export class Interview {
    */
   _copy_from(source: Interview): void {
     this._chatfield = JSON.parse(JSON.stringify(source._chatfield))
+  }
+
+  /**
+   * Pretty print the interview state (Python compatibility)
+   */
+  _pretty(): string {
+    const lines: string[] = []
+    lines.push(`${this._chatfield.type}: ${this._chatfield.desc}`)
+    lines.push('Fields:')
+    for (const [name, field] of Object.entries(this._chatfield.fields)) {
+      const value = field.value?.value || '<not set>'
+      lines.push(`  ${name}: ${value}`)
+    }
+    return lines.join('\n')
   }
 
   /**
