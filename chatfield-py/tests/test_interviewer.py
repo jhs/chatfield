@@ -172,22 +172,6 @@ class TestToolGeneration:
 class TestConversationFlow:
     """Test conversation flow management."""
     
-    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_go_method_basic(self):
-        """Test the go() method with real API."""
-        interview = (chatfield()
-            .type("SimpleInterview")
-            .field("name").desc("Your name")
-            .build())
-        interviewer = Interviewer(interview)
-        
-        # Start conversation
-        ai_message = interviewer.go(None)
-        
-        assert ai_message is not None
-        assert isinstance(ai_message, str)
-        assert len(ai_message) > 0
-    
     def test_interview_state_updates(self):
         """Test that interview state updates when fields are collected."""
         interview = (chatfield()

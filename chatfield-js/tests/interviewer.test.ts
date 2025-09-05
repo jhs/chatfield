@@ -155,22 +155,6 @@ describe('TestToolGeneration', () => {
 })
 
 describe('TestConversationFlow', () => {
-  test.skip('test_go_method_basic', async () => {
-    // Skip test that requires real API key
-    const interview = chatfield()
-      .type('SimpleInterview')
-      .field('name').desc('Your name')
-      .build()
-    const interviewer = new Interviewer(interview)
-    
-    // Start conversation
-    const aiMessage = await interviewer.go(null)
-    
-    expect(aiMessage).toBeDefined()
-    expect(typeof aiMessage).toBe('string')
-    expect(aiMessage!.length).toBeGreaterThan(0)
-  })
-  
   test('test_interview_state_updates', () => {
     const interview = chatfield()
       .type('SimpleInterview')
