@@ -160,7 +160,7 @@ class TestToolGeneration:
                 .desc("A number")
                 .as_int()
                 .as_bool()
-                .as_lang.fr()
+                .as_lang('fr')
             .build())
         interviewer = Interviewer(interview)
         
@@ -248,7 +248,7 @@ class TestInterviewerWithFeatures:
                 .reject("vague response")
                 .hint("Think carefully")
                 .as_int()
-                .as_bool.positive("True if positive")
+                .as_bool('positive', "True if positive")
             .build())
         interviewer = Interviewer(interview)
         
@@ -267,7 +267,7 @@ class TestInterviewerWithFeatures:
             .field("number")
                 .desc("A number")
                 .as_int()
-                .as_lang.fr()
+                .as_lang('fr')
             .build())
         interviewer = Interviewer(interview)
         
