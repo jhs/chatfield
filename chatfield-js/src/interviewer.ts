@@ -71,7 +71,7 @@ export class Interviewer {
   private llmWithTools!: ChatOpenAI
   private toolName: string
 
-  constructor(interview: Interview, options?: { threadId?: string; llmBackend?: any }) {
+  constructor(interview: Interview, options?: { threadId?: string; llmBackend?: any, llmId?: any }) {
     this.interview = interview
     this.checkpointer = new MemorySaver()
     this.config = {
@@ -85,7 +85,7 @@ export class Interviewer {
       this.llm = options.llmBackend
     } else {
       this.llm = new ChatOpenAI({
-        modelName: 'gpt-4o',
+        modelName: options?.llmId || 'gpt-4o',
         temperature: 0.0
       })
     }
