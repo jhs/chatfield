@@ -4,41 +4,60 @@ This test file shows how Python supports dynamic custom transformations.
 """
 
 import pytest
-from chatfield import Interview, chatfield
-from chatfield.decorators import as_int, as_bool, as_lang, as_str
-from chatfield.interview import FieldProxy
+from chatfield import chatfield
 
 
 class TestCustomTransformations:
-    """Test suite demonstrating custom transformation capabilities."""
-    def test_multiple_custom_transformations(self):
-        """Test multiple custom transformations on the same field."""
+    """Custom Transformations"""
+    
+    def test_multiple_custom_transformations_on_same_field(self):
+        """multiple custom transformations on same field"""
         
-        # Using builder API with multiple custom transformations
+        # Test multiple custom transformations on the same field
         form = (chatfield()
             .field('value')
                 .desc('Enter a value')
-                .as_int()
-                .as_int.neg1('This is always -1')
-                .as_int.doubled('Double the integer value')
-                .as_int.squared('Square the integer value')
-                .as_bool.even('True if the integer is even')
-                .as_lang.fr('French translation')
-                .as_str.uppercase('Convert to uppercase')
+                .as_int()  # Base transformation
+                .as_int('neg1', 'This is always -1')
+                .as_int('doubled', 'Double the integer value')
+                .as_int('squared', 'Square the integer value')
+                .as_bool('even', 'True if the integer is even')
+                .as_lang('fr', 'French translation')
+                .as_str('uppercase', 'Convert to uppercase')
             .build())
         
         # Check that all custom transformations were created
-        field_meta = form._chatfield['fields']['value']
-        casts = field_meta.get('casts', {})
-        assert 'as_int' in casts
-        assert 'as_int_neg1' in casts
-        assert 'as_int_doubled' in casts
-        assert 'as_int_squared' in casts
-        assert 'as_bool_even' in casts
-        assert 'as_lang_fr' in casts
-        assert 'as_str_uppercase' in casts
+        fields = form._chatfield['fields']
+        assert 'value' in fields
         
-        # Simulate LLM having provided all transformations
+        casts = fields['value'].get('casts', {})
+        
+        # Check base transformations
+        assert 'as_int' in casts
+        
+        # Check integer custom transformations
+        assert 'as_int_neg1' in casts
+        assert casts['as_int_neg1']['prompt'] == 'This is always -1'
+        
+        assert 'as_int_doubled' in casts
+        assert casts['as_int_doubled']['prompt'] == 'Double the integer value'
+        
+        assert 'as_int_squared' in casts
+        assert casts['as_int_squared']['prompt'] == 'Square the integer value'
+        
+        # Check boolean custom transformation
+        assert 'as_bool_even' in casts
+        assert casts['as_bool_even']['prompt'] == 'True if the integer is even'
+        
+        # Check language custom transformation
+        assert 'as_lang_fr' in casts
+        assert casts['as_lang_fr']['prompt'] == 'French translation'
+        
+        # Check string custom transformation
+        assert 'as_str_uppercase' in casts
+        assert casts['as_str_uppercase']['prompt'] == 'Convert to uppercase'
+        
+        # Simulate LLM having provided the value with transformations
         form._chatfield['fields']['value']['value'] = {
             'value': 'six',
             'as_int': 6,
@@ -52,8 +71,9 @@ class TestCustomTransformations:
             'as_quote': 'six'
         }
         
-        # Verify all transformations are accessible
+        # Access the values through properties (using Python's FieldProxy behavior)
         assert form.value == 'six'
+        # FieldProxy provides access to transformations
         assert form.value.as_int == 6
         assert form.value.as_int_neg1 == -1
         assert form.value.as_int_doubled == 12
