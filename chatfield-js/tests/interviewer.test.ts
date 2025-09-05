@@ -1,32 +1,51 @@
 /**
- * Tests for the Interviewer class equivalent functionality.
- * Mirrors Python's test_interviewer.py
+ * Tests for the Interviewer class.
+ * Mirrors Python's test_interviewer.py for feature parity.
  */
 
 import { chatfield } from '../src/builder'
 import { Interviewer } from '../src/interviewer'
+import { Interview } from '../src/interview'
 
-// Mock the ChatOpenAI for testing
+// Mock the LLM backend for testing
 class MockLLMBackend {
+  temperature: number = 0.0
+  modelName: string = 'openai:gpt-4o'
+  tools: any[] = []
+  
   bind_tools(tools: any[]) {
+    this.tools = tools
     return this
   }
   
   async invoke(messages: any[]) {
     return { content: 'Mock response' }
   }
+  
+  withStructuredOutput(schema: any) {
+    return this
+  }
 }
+
+// Mock chat model initialization
+jest.mock('../src/interviewer', () => {
+  const actual = jest.requireActual('../src/interviewer')
+  return {
+    ...actual,
+    init_chat_model: jest.fn((model: string, temperature: number) => {
+      return new MockLLMBackend()
+    })
+  }
+})
 
 describe('TestInterviewerBasics', () => {
   test('test_interviewer_initialization', () => {
-    const mockLLM = new MockLLMBackend()
-    
     const interview = chatfield()
       .type('SimpleInterview')
       .field('name').desc('Your name')
       .field('email').desc('Your email')
       .build()
-    const interviewer = new Interviewer(interview, { llmBackend: mockLLM })
+    const interviewer = new Interviewer(interview)
     
     expect(interviewer.interview).toBe(interview)
     expect(interviewer.config.configurable.thread_id).toBeDefined()
@@ -35,28 +54,25 @@ describe('TestInterviewerBasics', () => {
   })
   
   test('test_interviewer_with_custom_thread_id', () => {
-    const mockLLM = new MockLLMBackend()
-    
     const interview = chatfield()
       .type('SimpleInterview')
       .field('name').desc('Your name')
       .build()
-    const interviewer = new Interviewer(interview, { threadId: 'custom-123', llmBackend: mockLLM })
+    const interviewer = new Interviewer(interview, { threadId: 'custom-123' })
     
     expect(interviewer.config.configurable.thread_id).toBe('custom-123')
   })
   
   test('test_llm_initialization', () => {
-    const mockLLM = new MockLLMBackend()
-    
     const interview = chatfield()
       .type('SimpleInterview')
       .field('name').desc('Your name')
       .build()
-    const interviewer = new Interviewer(interview, { llmBackend: mockLLM })
+    const interviewer = new Interviewer(interview)
     
-    // Should use the mock LLM
-    expect(interviewer.llm).toBe(mockLLM)
+    // Should initialize with GPT-4o by default
+    expect(interviewer.llm).toBeDefined()
+    expect(interviewer.llm instanceof MockLLMBackend).toBe(true)
   })
 })
 
@@ -75,8 +91,8 @@ describe('TestSystemPromptGeneration', () => {
     expect(prompt).toContain('Customer feedback form')
     expect(prompt).toContain('rating: Overall satisfaction rating')
     expect(prompt).toContain('comments: Additional comments')
-    expect(prompt).toContain('Agent') // Default role
-    expect(prompt).toContain('User') // Default role
+    expect(prompt).toContain('Agent')  // Default role
+    expect(prompt).toContain('User')   // Default role
   })
   
   test('test_system_prompt_with_roles', () => {
@@ -114,30 +130,27 @@ describe('TestSystemPromptGeneration', () => {
     
     const prompt = interviewer.mk_system_prompt({ interview })
     
-    expect(prompt).toContain('must: specific details')
-    expect(prompt).toContain('reject: profanity')
+    expect(prompt).toContain('Must: specific details')
+    expect(prompt).toContain('Reject: profanity')
     // Note: Hints are included in specs but may not appear in system prompt
   })
 })
 
 describe('TestToolGeneration', () => {
   test('test_tool_creation', () => {
-    const mockLLM = new MockLLMBackend()
-    
     const interview = chatfield()
       .type('SimpleInterview')
       .field('field1').desc('Field 1')
       .field('field2').desc('Field 2')
       .build()
-    const interviewer = new Interviewer(interview, { llmBackend: mockLLM })
+    const interviewer = new Interviewer(interview)
     
     // Tool should be bound to LLM
     expect(interviewer.llm_with_both).toBeDefined()
+    expect(interviewer.llm_with_both).toHaveProperty('bind_tools')
   })
   
   test('test_tool_with_transformations', () => {
-    const mockLLM = new MockLLMBackend()
-    
     const interview = chatfield()
       .type('TypedInterview')
       .field('number')
@@ -146,7 +159,7 @@ describe('TestToolGeneration', () => {
         .as_bool()
         .as_lang('fr')
       .build()
-    const interviewer = new Interviewer(interview, { llmBackend: mockLLM })
+    const interviewer = new Interviewer(interview)
     
     // Tool args should include transformations
     // This is complex to test without running the actual tool
@@ -304,8 +317,6 @@ describe('TestInterviewerEdgeCases', () => {
   })
   
   test('test_thread_isolation', () => {
-    const mockLLM = new MockLLMBackend()
-    
     const interview1 = chatfield()
       .type('SimpleInterview')
       .field('name').desc('Your name')
@@ -315,8 +326,8 @@ describe('TestInterviewerEdgeCases', () => {
       .field('name').desc('Your name')
       .build()
     
-    const interviewer1 = new Interviewer(interview1, { threadId: 'thread-1', llmBackend: mockLLM })
-    const interviewer2 = new Interviewer(interview2, { threadId: 'thread-2', llmBackend: mockLLM })
+    const interviewer1 = new Interviewer(interview1, {threadId: 'thread-1'})
+    const interviewer2 = new Interviewer(interview2, {threadId: 'thread-2'})
     
     expect(interviewer1.config.configurable.thread_id).toBe('thread-1')
     expect(interviewer2.config.configurable.thread_id).toBe('thread-2')
