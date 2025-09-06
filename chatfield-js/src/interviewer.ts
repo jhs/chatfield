@@ -272,12 +272,13 @@ export class Interviewer {
     // Check if last message has tool calls
     const lastMessage = state.messages[state.messages.length - 1]
     if (lastMessage instanceof AIMessage && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+      console.log(`Route: think -> tools`)
       return 'tools'
     }
     
     // Check if interview is done
     if (this.interview._done) {
-      console.log('Route: to teardown')
+      console.log('Route: think -> teardown')
       return 'teardown'
     }
     

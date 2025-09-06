@@ -22,22 +22,26 @@ class FauxModel {
   
   async invoke(messages: any[]): Promise<AIMessage> {
     if (this.currentIndex >= this.responses.length) {
-      return new AIMessage('No more responses');
+      throw new Error('No more responses left in FauxModel');
     }
     const response = this.responses[this.currentIndex];
+    if (!response) {
+      throw new Error('FauxModel response is null or undefined');
+    }
+
     this.currentIndex++;
-    return response || new AIMessage('No response');
+    console.log(`Return response: ${response.content}`);
+    return response
   }
   
   bindTools(tools: any[]) {
-    console.log('Bind tools:', tools);
-    this.tools = tools;
+    // console.log('Bind tools:', tools);
     return this;
   }
   
-  withStructuredOutput(schema: any) {
-    return this;
-  }
+  // withStructuredOutput(schema: any) {
+  //   return this;
+  // }
 }
 
 /**
