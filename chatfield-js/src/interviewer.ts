@@ -71,7 +71,7 @@ export class Interviewer {
   private llmWithTools!: ChatOpenAI
   private toolName: string
 
-  constructor(interview: Interview, options?: { threadId?: string; llmBackend?: any, llmId?: any }) {
+  constructor(interview: Interview, options?: { threadId?: string; llm?: any, llmId?: any }) {
     this.interview = interview
     this.checkpointer = new MemorySaver()
     this.config = {
@@ -81,8 +81,8 @@ export class Interviewer {
     }
 
     // Initialize LLM (use mock if provided)
-    if (options?.llmBackend) {
-      this.llm = options.llmBackend
+    if (options?.llm) {
+      this.llm = options.llm
     } else {
       this.llm = new ChatOpenAI({
         modelName: options?.llmId || 'gpt-4o',
@@ -446,10 +446,9 @@ ${fields.join('\n\n')}
       
       // Check for interrupts
       for (const [nodeName, nodeOutput] of Object.entries(event)) {
-        if (nodeOutput && typeof nodeOutput === 'object' && '__interrupt__' in nodeOutput) {
-          const interruptValue = (nodeOutput as any).__interrupt__.value
-          if (typeof interruptValue === 'string') {
-            interrupts.push(interruptValue)
+        if (nodeName === '__interrupt__') {
+          for (const message of nodeOutput as any[]) {
+            interrupts.push(message.value as string)
           }
         }
       }

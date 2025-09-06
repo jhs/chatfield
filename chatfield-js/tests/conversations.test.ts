@@ -131,7 +131,7 @@ describe('Conversations', () => {
       const llm = new FauxModel(llmResponses);
       
       const order = createRestaurantOrder();
-      const interviewer = new Interviewer(order, { threadId: 'test-vegan-order', llmBackend: llm });
+      const interviewer = new Interviewer(order, { threadId: 'test-vegan-order', llm: llm });
       
       // Process each input
       for (const userInput of prefabInputs) {
@@ -158,7 +158,7 @@ describe('Conversations', () => {
       // User messages are strings, everything else is from the model.
       const allMessages = [
         null,
-        new AIMessage('Welcome to the restaurant! What can I get you started with?'),
+        new AIMessage('Welcome to the restaurant! What is your regular order?'),
         
         'The Sir Digby Chicken Caesar sounds good',
         new AIMessage('Great choice! And for your main course?'),
@@ -194,7 +194,7 @@ describe('Conversations', () => {
       const llm = new FauxModel(llmResponses);
       
       const order = createRestaurantOrder();
-      const interviewer = new Interviewer(order, { threadId: 'test-regular-order', llmBackend: llm });
+      const interviewer = new Interviewer(order, { threadId: 'test-regular-order', llm: llm });
       
       // Process each input
       for (const userInput of prefabInputs) {
@@ -270,7 +270,7 @@ describe('Conversations', () => {
       
       const llm = new FauxModel(llmResponses);
       const interview = createJobInterview();
-      const interviewer = new Interviewer(interview, { threadId: 'test-career-change', llmBackend: llm });
+      const interviewer = new Interviewer(interview, { threadId: 'test-career-change', llm: llm });
       
       // Process inputs
       for (const userInput of prefabInputs) {
@@ -331,7 +331,7 @@ describe('Conversations', () => {
       
       const llm = new FauxModel(llmResponses);
       const interview = createJobInterview();
-      const interviewer = new Interviewer(interview, { threadId: 'test-technical', llmBackend: llm });
+      const interviewer = new Interviewer(interview, { threadId: 'test-technical', llm: llm });
       
       // Process inputs
       for (const userInput of prefabInputs) {
@@ -403,7 +403,7 @@ describe('Conversations', () => {
       const llm = new FauxModel(llmResponses);
       
       const interview = createNumberInterview();
-      const interviewer = new Interviewer(interview, { threadId: 'test-number', llmBackend: llm });
+      const interviewer = new Interviewer(interview, { threadId: 'test-number', llm: llm });
       
       // Process input
       for (const userInput of prefabInputs) {
@@ -448,7 +448,7 @@ describe('Conversations', () => {
       const llm = new FauxModel(llmResponses);
       
       const interview = createNumberInterview();
-      const interviewer = new Interviewer(interview, { threadId: 'test-odd-number', llmBackend: llm });
+      const interviewer = new Interviewer(interview, { threadId: 'test-odd-number', llm: llm });
       
       // Process input
       for (const userInput of prefabInputs) {
@@ -510,7 +510,7 @@ describe('Conversations', () => {
         
         .build();
       
-      const interviewer = new Interviewer(interview, { threadId: 'test-contact', llmBackend: llm });
+      const interviewer = new Interviewer(interview, { threadId: 'test-contact', llm: llm });
       
       // Process inputs
       for (const userInput of prefabInputs) {
@@ -560,7 +560,7 @@ describe('Conversations', () => {
         
         .build();
       
-      const interviewer = new Interviewer(interview, { threadId: 'test-bool', llmBackend: llm });
+      const interviewer = new Interviewer(interview, { threadId: 'test-bool', llm: llm });
       
       // Process input
       for (const userInput of prefabInputs) {
