@@ -116,6 +116,73 @@
             "envFile": "${workspaceFolder}/.env",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Jest: Debug All Tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--inspect-brk",
+                "${workspaceFolder}/chatfield-js/node_modules/.bin/jest",
+                "--runInBand"
+            ],
+            "cwd": "${workspaceFolder}/chatfield-js",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Jest: Debug Current Test File",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--inspect-brk",
+                "${workspaceFolder}/chatfield-js/node_modules/.bin/jest",
+                "--runInBand",
+                "${relativeFile}"
+            ],
+            "cwd": "${workspaceFolder}/chatfield-js",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Jest: Debug conversations.test.ts",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--inspect-brk",
+                "${workspaceFolder}/chatfield-js/node_modules/.bin/jest",
+                "--runInBand",
+                "conversations.test.ts"
+            ],
+            "cwd": "${workspaceFolder}/chatfield-js",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Jest: Debug Specific Test",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--inspect-brk",
+                "${workspaceFolder}/chatfield-js/node_modules/.bin/jest",
+                "--runInBand",
+                "-t",
+                "${input:testName}"
+            ],
+            "cwd": "${workspaceFolder}/chatfield-js",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "testName",
+            "type": "promptString",
+            "description": "Enter test name pattern to debug"
         }
     ]
 }
