@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with the TypeScript/Java
 
 ## Overview
 
-This directory contains the comprehensive test suite for the Chatfield TypeScript/JavaScript library, mirroring the Python implementation's test structure for feature parity. Tests cover the builder API, Interview class, Interviewer orchestration, transformations, and conversation flows using Jest as the testing framework.
+This directory contains the comprehensive test suite for the Chatfield TypeScript/JavaScript library, mirroring the Python implementation's test structure for feature parity. Tests cover the builder API, Interview class, Interviewer orchestration, transformations, and conversation flows using Jest as the testing framework. The test structure uses nested describe/it blocks that correspond exactly to Python's pytest-describe organization.
 
 ## Project Structure
 
@@ -24,44 +24,80 @@ chatfield-js/tests/
 ## Key Files
 
 ### interview.test.ts
-- **Purpose**: Tests the core Interview class functionality
+- **Purpose**: Tests the core Interview class functionality (mirrors test_interview.py)
 - **Coverage**: Field access, state management, completion detection
-- **Test Suites**: `TestInterviewBasics`, `TestFieldAccess`, `TestDoneProperty`
+- **Structure**: `describe('Interview')` with nested describe blocks
+- **Test Examples**:
+  - `describe('field discovery')` → `it('uses field name when no description')`
+  - `describe('field access')` → `it('returns none for uncollected fields')`
+  - `describe('completion state')` → `it('starts with done as false')`
 - **Focus**: Interview instance behavior without LLM interaction
 
 ### interviewer.test.ts
-- **Purpose**: Tests the Interviewer class orchestration
+- **Purpose**: Tests the Interviewer class orchestration (mirrors test_interviewer.py)
 - **Coverage**: Initialization, LLM binding, tool configuration
+- **Structure**: Nested describe blocks matching Python's structure
+- **Test Examples**:
+  - `describe('initialization')` → `it('creates interviewer with default model')`
+  - `describe('tool generation')` → `it('generates tools for all fields')`
 - **Mock Strategy**: Uses `MockLLMBackend` for deterministic testing
-- **Key Tests**: State transitions, field collection, validation flow
 
 ### interviewer_conversation.test.ts
-- **Purpose**: Tests multi-turn conversation dynamics
+- **Purpose**: Tests multi-turn conversation dynamics (mirrors test_interviewer_conversation.py)
 - **Coverage**: Message handling, state management, field progression
-- **Test Suites**: `TestConversationFlow`, `TestFieldProgression`
+- **Structure**: Matches Python's BDD-style organization
+- **Test Examples**:
+  - `describe('conversation flow')` → `it('handles multi turn conversations')`
+  - `describe('field progression')` → `it('collects fields in order')`
 - **Focus**: Conversation state machine and transitions
 
 ### builder.test.ts
-- **Purpose**: Tests the fluent builder API
+- **Purpose**: Tests the fluent builder API (mirrors test_builder.py)
 - **Coverage**: Method chaining, field configuration, validation rules
-- **Test Suites**: `TestBuilderChaining`, `TestFieldConfiguration`
+- **Structure**: `describe('Builder')` with feature-specific describe blocks
+- **Test Examples**:
+  - `describe('chaining')` → `it('supports method chaining')`
+  - `describe('field configuration')` → `it('applies must rules')`
+  - `describe('transformations')` → `it('adds type transformations')`
 - **Validation**: Ensures builder creates correct Interview instances
 
+### field_proxy.test.ts
+- **Purpose**: Tests the FieldProxy implementation (mirrors test_field_proxy.py)
+- **Coverage**: String-like behavior, transformation access
+- **Structure**: `describe('FieldProxy')` with behavior-specific tests
+- **Test Examples**:
+  - `describe('string behavior')` → `it('acts as normal string')`
+  - `describe('transformations')` → `it('provides transformation access')`
+  - `describe('attribute access')` → `it('returns transformation values')`
+- **Focus**: Dynamic property access and string subclass behavior
+
 ### custom_transformations.test.ts
-- **Purpose**: Tests transformation system
+- **Purpose**: Tests transformation system (mirrors test_custom_transformations.py)
 - **Coverage**: Type transformations, language transformations, cardinality
-- **Key Tests**: `.asInt()`, `.asFloat()`, `.asBool()`, `.asLang()`
+- **Structure**: `describe('Transformations')` with type-specific blocks
+- **Test Examples**:
+  - `describe('numeric transformations')` → `it('transforms to int')`
+  - `describe('language transformations')` → `it('translates to french')`
+  - `describe('cardinality')` → `it('chooses one option')`
 - **Focus**: Transformation registration and application
 
 ### conversations.test.ts
-- **Purpose**: Integration tests with complete conversation flows
+- **Purpose**: Integration tests with complete conversation flows (mirrors test_conversations.py)
 - **Coverage**: End-to-end scenarios, complex validations
-- **Test Suites**: `TestFullConversations`, `TestEdgeCases`
+- **Structure**: `describe('Conversations')` with scenario-based tests
+- **Test Examples**:
+  - `describe('full conversations')` → `it('completes job interview')`
+  - `describe('edge cases')` → `it('handles invalid responses')`
+  - `describe('validation')` → `it('enforces must rules')`
 - **Note**: May include tests with real API calls (properly marked)
 
 ### integration/react.ts
-- **Purpose**: Tests React hooks and components
+- **Purpose**: Tests React hooks and components (TypeScript-specific)
 - **Coverage**: `useConversation` hook, state management, UI updates
+- **Structure**: Standard React testing patterns with describe/it
+- **Test Examples**:
+  - `describe('useConversation')` → `it('manages conversation state')`
+  - `describe('useGatherer')` → `it('provides gatherer interface')`
 - **Requirements**: React Testing Library, DOM environment
 - **Focus**: React integration and component behavior
 
@@ -112,6 +148,19 @@ The test suite uses Jest with the following configuration:
 ```
 
 ## Architecture Notes
+
+### Test Harmonization with Python
+
+Each TypeScript test file corresponds to a Python test file with matching test descriptions:
+
+| TypeScript File | Python File | Description Pattern |
+|----------------|-------------|--------------------|
+| interview.test.ts | test_interview.py | Identical describe/it structure |
+| interviewer.test.ts | test_interviewer.py | Same test names and organization |
+| builder.test.ts | test_builder.py | Matching feature coverage |
+| field_proxy.test.ts | test_field_proxy.py | Same behavior tests |
+| custom_transformations.test.ts | test_custom_transformations.py | Identical transformation tests |
+| conversations.test.ts | test_conversations.py | Same scenario tests |
 
 ### Test Organization
 
@@ -167,28 +216,43 @@ const mockResponses = {
 ### Test Patterns
 
 ```typescript
-// Standard test structure
+// Harmonized test structure matching Python's pytest-describe
 describe('ComponentName', () => {
-  beforeEach(() => {
-    // Setup
-  })
+  // Matches Python's describe_component_name
   
-  afterEach(() => {
-    // Cleanup
-  })
-  
-  test('should do something', () => {
-    // Arrange
-    const interview = createTestInterview()
+  describe('feature area', () => {
+    // Matches Python's describe_feature_area
     
-    // Act
-    const result = interview.someMethod()
+    beforeEach(() => {
+      // Setup
+    })
     
-    // Assert
-    expect(result).toBe(expected)
+    afterEach(() => {
+      // Cleanup
+    })
+    
+    it('does something specific', () => {
+      // Matches Python's it_does_something_specific
+      // Arrange
+      const interview = createTestInterview()
+      
+      // Act
+      const result = interview.someMethod()
+      
+      // Assert
+      expect(result).toBe(expected)
+    })
   })
 })
 ```
+
+### Naming Convention Mapping
+
+| Python | TypeScript | Example |
+|--------|------------|---------||
+| `describe_interview` | `describe('Interview')` | Top-level component |
+| `describe_field_discovery` | `describe('field discovery')` | Feature area |
+| `it_uses_field_name_when_no_description` | `it('uses field name when no description')` | Specific test |
 
 ## Testing Approach
 
@@ -294,28 +358,51 @@ test('useConversation hook', () => {
 
 ## Known Considerations
 
-1. **Test Isolation**: Each test must be independent
-2. **Mock Cleanup**: Jest automatically clears mocks between tests
-3. **TypeScript Types**: Ensure proper typing for mocks
-4. **Async Handling**: Use async/await properly in tests
-5. **Timer Mocks**: Use `jest.useFakeTimers()` for time-dependent tests
-6. **Module Mocks**: Place in `__mocks__` directory or use `jest.mock()`
-7. **Coverage Gaps**: Focus on critical paths first
-8. **Flaky Tests**: Use deterministic mocks instead of real APIs
+1. **Test Harmonization**: Test descriptions must match Python exactly
+2. **Naming Convention**: Use `it()` instead of `test()` to match Python's `it_*` pattern
+3. **Test Isolation**: Each test must be independent
+4. **Mock Cleanup**: Jest automatically clears mocks between tests
+5. **TypeScript Types**: Ensure proper typing for mocks
+6. **Async Handling**: Use async/await properly in tests
+7. **Timer Mocks**: Use `jest.useFakeTimers()` for time-dependent tests
+8. **Module Mocks**: Place in `__mocks__` directory or use `jest.mock()`
+9. **Coverage Gaps**: Focus on critical paths first
+10. **Flaky Tests**: Use deterministic mocks instead of real APIs
 
 ## Adding New Tests
 
 When creating new tests:
 
-1. Follow naming convention (`*.test.ts`)
-2. Place in appropriate file based on component
-3. Use descriptive test names
-4. Group related tests in `describe` blocks
-5. Add setup/teardown in `beforeEach`/`afterEach`
-6. Mock external dependencies
-7. Test both success and failure cases
-8. Add comments for complex test logic
-9. Update this CLAUDE.md file if adding new test files
+1. **Check Python equivalent**: Look for corresponding Python test first
+2. **Match test description**: Use exact same test description as Python
+3. Follow naming convention (`*.test.ts` for files)
+4. Use `describe()` and `it()` to match Python's structure
+5. Place in appropriate file based on component
+6. Group related tests in nested `describe` blocks
+7. Add setup/teardown in `beforeEach`/`afterEach`
+8. Mock external dependencies
+9. Test both success and failure cases
+10. Add comments for complex test logic
+11. Update this CLAUDE.md file if adding new test files
+
+### Example of Harmonized Test:
+```typescript
+// TypeScript (interview.test.ts)
+describe('Interview', () => {
+  describe('field discovery', () => {
+    it('uses field name when no description', () => {
+      // Test implementation
+    })
+  })
+})
+
+// Python (test_interview.py)
+def describe_interview():
+    def describe_field_discovery():
+        def it_uses_field_name_when_no_description():
+            """Uses field name as description when none provided."""
+            # Test implementation
+```
 
 ## Common Issues and Solutions
 

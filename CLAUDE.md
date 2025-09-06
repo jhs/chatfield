@@ -20,6 +20,8 @@ Chatfield is a dual-implementation library that transforms data collection from 
 
 ```
 Chatfield/
+├── Documentation/               # Project-wide documentation
+│   └── TEST_HARMONIZATION.md    # Test harmonization guide and progress tracking
 ├── chatfield-py/                # Python implementation (v0.2.0)
 │   ├── chatfield/               # Core Python package
 │   │   ├── __init__.py          # Main exports and public API
@@ -216,6 +218,9 @@ npx tsx minimal.ts                                  # Test OpenAI API connection
 
 ## Testing Approach
 
+### Test Harmonization
+Both implementations follow identical BDD-style test organization with matching test descriptions. See `Documentation/TEST_HARMONIZATION.md` for the complete harmonization guide, naming conventions, and progress tracking.
+
 ### Python Tests
 - **Framework**: pytest with pytest-describe for BDD-style organization
 - **Structure**: Nested `describe_*` and `it_*` functions for test organization
@@ -224,7 +229,7 @@ npx tsx minimal.ts                                  # Test OpenAI API connection
 - **Live API Tests**: Real OpenAI API tests (marked with `@pytest.mark.requires_api_key`)
 - **Coverage**: Run `make test-cov` for HTML coverage report in `htmlcov/`
 - **Test Files**: `test_*.py` naming convention in `tests/` directory
-- **Test Harmonization**: Test names and descriptions match TypeScript implementation
+- **Test Harmonization**: Test names and descriptions match TypeScript implementation exactly
 
 ### TypeScript Tests
 - **Framework**: Jest with ts-jest for TypeScript support
