@@ -160,71 +160,7 @@ def display_results(interview):
     print("\n" + "=" * 60)
     print("NUMBER ANALYSIS")
     print("-" * 60)
-    
-    if interview.favorite:
-        print(f"\n--- Favorite Number: {interview.favorite} ---")
-        
-        # Basic transformations
-        if hasattr(interview.favorite, 'as_int'):
-            print(f"Integer value: {interview.favorite.as_int}")
-        if hasattr(interview.favorite, 'as_float'):
-            print(f"Float value: {interview.favorite.as_float}")
-        if hasattr(interview.favorite, 'as_percent'):
-            print(f"Percentage: {interview.favorite.as_percent * 100}%")
-        if hasattr(interview.favorite, 'as_str'):
-            print(f"In words: {interview.favorite.as_str}")
-        
-        # Language translations
-        print("\nTranslations:")
-        if hasattr(interview.favorite, 'as_lang_fr'):
-            print(f"  French: {interview.favorite.as_lang_fr}")
-        if hasattr(interview.favorite, 'as_lang_de'):
-            print(f"  German: {interview.favorite.as_lang_de}")
-        if hasattr(interview.favorite, 'as_lang_es'):
-            print(f"  Spanish: {interview.favorite.as_lang_es}")
-        if hasattr(interview.favorite, 'as_lang_ja'):
-            print(f"  Japanese: {interview.favorite.as_lang_ja}")
-        if hasattr(interview.favorite, 'as_lang_th'):
-            print(f"  Thai: {interview.favorite.as_lang_th}")
-        
-        # Boolean properties
-        print("\nMathematical properties:")
-        if hasattr(interview.favorite, 'as_bool_even'):
-            print(f"  Even: {interview.favorite.as_bool_even}")
-        if hasattr(interview.favorite, 'as_bool_prime'):
-            print(f"  Prime: {interview.favorite.as_bool_prime}")
-        if hasattr(interview.favorite, 'as_bool_perfect_square'):
-            print(f"  Perfect square: {interview.favorite.as_bool_perfect_square}")
-        if hasattr(interview.favorite, 'as_bool_power_of_two'):
-            print(f"  Power of two: {interview.favorite.as_bool_power_of_two}")
-        
-        # Set of factors
-        if hasattr(interview.favorite, 'as_set_factors'):
-            print(f"  Factors: {interview.favorite.as_set_factors}")
-        
-        # Cardinality selections
-        print("\nCategorizations:")
-        if hasattr(interview.favorite, 'as_one_size_category'):
-            print(f"  Size category: {interview.favorite.as_one_size_category}")
-        if hasattr(interview.favorite, 'as_maybe_special_property'):
-            print(f"  Special property: {interview.favorite.as_maybe_special_property or 'None'}")
-        if hasattr(interview.favorite, 'as_multi_math_properties'):
-            print(f"  Math properties: {interview.favorite.as_multi_math_properties}")
-        if hasattr(interview.favorite, 'as_any_cultural_significance'):
-            print(f"  Cultural significance: {interview.favorite.as_any_cultural_significance or '[]'}")
-    
-    if interview.reason:
-        print(f"\nReason: {interview.reason}")
-    
-    if interview.least_favorite:
-        print(f"\n--- Least Favorite Number: {interview.least_favorite} ---")
-        if hasattr(interview.least_favorite, 'as_int'):
-            print(f"Integer value: {interview.least_favorite.as_int}")
-        if hasattr(interview.least_favorite, 'as_str'):
-            print(f"In words: {interview.least_favorite.as_str}")
-        if hasattr(interview.least_favorite, 'as_bool_unlucky'):
-            print(f"Considered unlucky: {interview.least_favorite.as_bool_unlucky}")
-    
+    print(interview._pretty())
     print("=" * 60)
 
 
