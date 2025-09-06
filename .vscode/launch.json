@@ -35,21 +35,21 @@
         },
         */
 
-        {
-            "name": "Debug run (Standalone)",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/chatfield/restaurant_order.py", // Specify the script directly
-            // "program": "${file}", // Specify the script directly
-            "cwd": "${workspaceFolder}/chatfield",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/chatfield"
-            },
-            "envFile": "${workspaceFolder}/.env",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "stopOnEntry": false
-        },
+        // {
+        //     "name": "Debug run (Standalone)",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/chatfield/restaurant_order.py", // Specify the script directly
+        //     // "program": "${file}", // Specify the script directly
+        //     "cwd": "${workspaceFolder}/chatfield",
+        //     "env": {
+        //         "PYTHONPATH": "${workspaceFolder}/chatfield"
+        //     },
+        //     "envFile": "${workspaceFolder}/.env",
+        //     "console": "integratedTerminal",
+        //     "justMyCode": false,
+        //     "stopOnEntry": false
+        // },
 
         {
             "name": "Python: Current File",
@@ -100,18 +100,19 @@
             "justMyCode": false
         },
         {
-            "name": "Pytest: Specific Test (test_llm_initialization)",
+            "name": "Pytest: Specific Test",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
-                "-v",
-                "${workspaceFolder}/chatfield/tests"
+                // "-v",
+                "-svx",
+                "-k", "it_adapts_to_vegan_preferences"
             ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
+            "cwd": "${workspaceFolder}/chatfield-py",
+            // "env": {
+            //     "PYTHONPATH": "${workspaceFolder}/chatfield-py"
+            // },
             "envFile": "${workspaceFolder}/.env",
             "console": "integratedTerminal",
             "justMyCode": false
