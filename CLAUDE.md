@@ -4,20 +4,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chatfield is a dual-implementation project that transforms data collection from rigid forms into natural conversations powered by LLMs. It provides both Python and TypeScript/JavaScript implementations with feature parity as a goal.
+Chatfield is a dual-implementation library that transforms data collection from rigid forms into natural conversations powered by LLMs. It provides both Python (v0.2.0) and TypeScript/JavaScript (v0.1.0) implementations with feature parity as a goal.
+
+**Core Concept**: Replace traditional form fields with conversational dialogues that intelligently gather, validate, and transform structured data through natural language interactions.
 
 ## Project Structure
 
 ```
 Chatfield/
-├── chatfield-py/        # Python implementation (v0.2.0)
-│   ├── chatfield/       # Core Python package
-│   ├── examples/        # Python usage examples
-│   └── tests/           # Python test suite
-└── chatfield-js/        # TypeScript/JavaScript implementation (v0.1.0)
-    ├── src/             # TypeScript source code
-    ├── examples/        # JavaScript/TypeScript examples
-    └── tests/           # JavaScript test suite
+├── chatfield-py/                # Python implementation (v0.2.0)
+│   ├── chatfield/               # Core Python package
+│   │   ├── __init__.py          # Main exports and public API
+│   │   ├── interview.py         # Base Interview class with field discovery
+│   │   ├── interviewer.py       # LangGraph-based conversation orchestration
+│   │   ├── decorators.py        # Decorator implementations (@alice, @must, @as_int, etc.)
+│   │   ├── field_proxy.py       # FieldProxy string subclass for transformations
+│   │   ├── builder.py           # Fluent builder API (alternative to decorators)
+│   │   ├── serialization.py     # Interview state serialization
+│   │   ├── presets.py           # Common preset decorators and configurations
+│   │   └── visualization.py     # Graph visualization utilities
+│   ├── tests/                   # Test suite (test_*.py naming)
+│   │   ├── test_interview.py    # Interview class tests
+│   │   ├── test_interviewer.py  # Interviewer orchestration tests
+│   │   ├── test_builder.py      # Builder API tests
+│   │   ├── test_field_proxy.py  # FieldProxy tests
+│   │   └── test_conversations.py # End-to-end conversation tests
+│   ├── examples/                # Python usage examples
+│   │   ├── job_interview.py     # Job application interview example
+│   │   ├── restaurant_order.py  # Restaurant ordering conversation
+│   │   ├── tech_request.py      # Technical support request form
+│   │   └── favorite_number.py   # Simple number collection with validation
+│   ├── Makefile                 # Python development shortcuts
+│   ├── pyproject.toml           # Python package configuration
+│   └── CLAUDE.md                # Python-specific implementation guide
+│
+└── chatfield-js/                # TypeScript/JavaScript implementation (v0.1.0)
+    ├── src/                     # TypeScript source code
+    │   ├── index.ts             # Main exports and public API
+    │   ├── interview.ts         # Base Interview class (mirrors Python)
+    │   ├── interviewer.ts       # LangGraph conversation orchestration
+    │   ├── decorators.ts        # Decorator implementations
+    │   ├── field-proxy.ts       # FieldProxy for transformations
+    │   ├── builder.ts           # Primary fluent builder API
+    │   ├── builder-types.ts     # TypeScript type definitions for builder
+    │   ├── types.ts             # Core type definitions
+    │   └── integrations/        # Framework integrations
+    │       ├── react.ts         # React hooks (useGatherer, etc.)
+    │       ├── react-components.tsx # UI components
+    │       └── copilotkit.tsx   # CopilotKit integration
+    ├── tests/                   # Jest test suite (*.test.ts naming)
+    │   ├── interview.test.ts    # Interview class tests
+    │   ├── interviewer.test.ts  # Interviewer orchestration tests
+    │   ├── builder.test.ts      # Builder API tests
+    │   ├── conversations.test.ts # End-to-end conversation tests
+    │   └── integration/         # Integration test scenarios
+    ├── examples/                # TypeScript/JavaScript examples
+    │   ├── basic-usage.ts       # Simple builder pattern example
+    │   ├── job-interview.ts     # Job application (mirrors Python)
+    │   ├── restaurant-order.ts  # Restaurant ordering
+    │   ├── decorator-usage.ts   # Decorator API examples
+    │   ├── decorator-react.tsx  # React component examples
+    │   ├── schema-based.ts      # Schema-driven approach
+    │   └── type-safe-demo.ts    # TypeScript type inference demo
+    ├── package.json             # Node package configuration
+    ├── tsconfig.json            # TypeScript compiler configuration
+    ├── jest.config.js           # Jest testing configuration
+    ├── minimal.ts               # Minimal OpenAI API test script
+    └── CLAUDE.md                # TypeScript-specific implementation guide
 ```
 
 ## Development Commands
@@ -25,157 +78,361 @@ Chatfield/
 ### Python Implementation (chatfield-py/)
 
 ```bash
+# Setup & Installation
+cd chatfield-py
+python -m venv .venv                                # Create virtual environment
+source .venv/bin/activate                           # Activate venv (Linux/Mac)
+pip install -e ".[dev]"                             # Install with dev dependencies
+
 # Testing
-cd chatfield-py && python -m pytest                    # Run all tests
+python -m pytest                                    # Run all tests
 python -m pytest tests/test_interview.py            # Run specific test file
-python -m pytest -k "test_name"                     # Run specific test
+python -m pytest -k "test_name"                     # Run specific test by name
 python -m pytest -m "not slow"                      # Skip slow tests
+python -m pytest -m "requires_api_key"              # Run only API tests
 
 # Code Quality
-black chatfield tests                               # Format code
-isort chatfield tests                               # Sort imports
-flake8 chatfield tests                              # Lint code
-mypy chatfield                                      # Type checking
+make format                                          # Format with black & isort
+make lint                                            # Run flake8 linting
+make typecheck                                       # Run mypy type checking
+make test-cov                                        # Run tests with coverage report
 
-# Build & Install
+# Build & Distribution
+make build                                           # Build distribution packages
 pip install -e .                                     # Development install
-pip install -e ".[dev]"                             # Install with dev dependencies
-python -m build                                     # Build distribution
+
+# Running Examples
+cd examples && python job_interview.py              # Run any example
+python -c "from chatfield import Interview"         # Quick import test
 ```
 
 ### TypeScript/JavaScript Implementation (chatfield-js/)
 
 ```bash
-# Development
-cd chatfield-js && npm install                      # Install dependencies
+# Setup & Installation
+cd chatfield-js
+npm install                                          # Install dependencies
+
+# Development & Build
 npm run build                                        # Compile TypeScript to dist/
 npm run dev                                          # Watch mode compilation
-npm run clean                                        # Clean dist/ directory
+npm run clean                                        # Remove dist/ directory
 
 # Testing
 npm test                                             # Run Jest test suite
 npm run test:watch                                   # Watch mode testing
+npm test -- interview.test.ts                       # Run specific test file
 
 # Code Quality
 npm run lint                                        # ESLint checks
 
 # Running Examples
-npm run min                                          # Run minimal.ts example
+npm run min                                          # Run minimal.ts OpenAI test
 npx tsx examples/basic-usage.ts                     # Run any example directly
+node dist/examples/basic-usage.js                   # Run compiled example
+
+# Quick Tests
+npx tsx minimal.ts                                  # Test OpenAI API connection
 ```
 
 ## Architecture Overview
 
 ### Core Concepts (Both Implementations)
 
-1. **Interview/Gatherer**: Main class that defines fields to collect
-2. **Field Definitions**: Methods/properties that define what data to gather
-3. **Decorators/Builders**: API for configuring validation and transformations
-4. **Interviewer**: Orchestrates the conversation flow using LLMs
-5. **LLM Backend**: Handles communication with AI models (OpenAI)
+1. **Interview/Gatherer**: Main class that defines fields to collect via methods or builder API
+2. **Field Definitions**: Methods (Python) or builder calls (TypeScript) that define data fields
+3. **Field Specifications**: Validation rules (@must, @reject, @hint) applied to fields
+4. **Field Transformations**: Type casts (@as_int, @as_bool, etc.) computed by LLM
+5. **Interviewer**: Orchestrates conversation flow using LangGraph and LLMs
+6. **FieldProxy**: String subclass providing dot-access to transformations
+7. **State Management**: LangGraph manages conversation state and transitions
 
 ### Python Implementation Details
 
-- **Decorator-based API**: Primary interface using `@alice`, `@bob`, `@must`, `@reject`, `@hint`, `@as_int`, etc.
-- **LangGraph Orchestration**: Uses LangGraph for conversation state management
-- **FieldProxy**: String subclass providing transformation access (e.g., `field.as_int`)
-- **Dependencies**: langchain, langgraph, openai, pydantic
-- **State Management**: Custom reducers for merging Interview states
+- **Primary API**: Decorator-based (`@alice`, `@bob`, `@must`, `@as_int`)
+- **Alternative API**: Fluent builder pattern (`chatfield().field().must()`)
+- **Orchestration**: LangGraph state machine with nodes and edges
+- **Field Discovery**: Automatic via method inspection in `Interview.__init__`
+- **Data Storage**: `_chatfield` dictionary structure on Interview instances
+- **Transformations**: FieldProxy provides `field.as_int`, `field.as_lang_fr`, etc.
+- **Dependencies**: langchain (0.3.27+), langgraph (0.6.4+), openai (1.99.6+), pydantic (2.11.7+)
 
 ### TypeScript Implementation Details
 
-- **Builder API**: Primary interface using fluent chainable methods
-- **Multiple API Styles**: Builder, decorator, and schema-based approaches
-- **React Integration**: Hooks and components for UI integration
-- **CopilotKit Support**: Sidebar component for conversational interfaces
-- **Dependencies**: @langchain/core, openai, reflect-metadata, zod
+- **Primary API**: Fluent builder pattern (`chatfield().field().must()`)
+- **Alternative APIs**: Decorators (experimental), schema-based
+- **Orchestration**: LangGraph TypeScript with state management
+- **Type Safety**: Full TypeScript type inference and checking
+- **React Integration**: Hooks (`useGatherer`) and components
+- **CopilotKit**: Sidebar component for conversational UI
+- **Dependencies**: @langchain/core (0.3.72+), openai (4.70.0+), reflect-metadata, zod
+
+### Synchronization Requirements
+
+**CRITICAL**: TypeScript implementation MUST stay synchronized with Python:
+- File names match (e.g., `interview.py` → `interview.ts`)
+- Class/function names identical (e.g., `Interview`, `Interviewer`, `FieldProxy`)
+- Method names preserved (e.g., `_name()`, `_pretty()`, `as_int`)
+- Test structure mirrors Python (e.g., `test_builder.py` → `builder.test.ts`)
+- Only deviate for language-specific requirements
 
 ## Key Files to Understand
 
-### Python
-- `chatfield-py/chatfield/interview.py`: Base Interview class with field discovery
-- `chatfield-py/chatfield/interviewer.py`: LangGraph-based conversation orchestration
-- `chatfield-py/chatfield/decorators.py`: All decorator implementations
-- `chatfield-py/chatfield/field_proxy.py`: FieldProxy string subclass for transformations
+### Python Core Files
+- `chatfield/interview.py`: Base Interview class, field discovery, _chatfield structure
+- `chatfield/interviewer.py`: LangGraph orchestration, tool generation, state management
+- `chatfield/decorators.py`: All decorators (@alice, @must, @as_int, etc.)
+- `chatfield/field_proxy.py`: String subclass for transformation access
+- `chatfield/builder.py`: Fluent API alternative to decorators
+- `chatfield/serialization.py`: State serialization for LangGraph
 
-### TypeScript
-- `chatfield-js/src/core/types.ts`: Core type definitions
-- `chatfield-js/src/builders/gatherer-builder.ts`: Main builder API
-- `chatfield-js/src/backends/llm-backend.ts`: LLM provider abstraction
-- `chatfield-js/src/integrations/react.ts`: React hooks and components
+### TypeScript Core Files
+- `src/interview.ts`: Base Interview class (mirrors Python implementation)
+- `src/interviewer.ts`: LangGraph TypeScript orchestration
+- `src/builder.ts`: Primary fluent builder API
+- `src/field-proxy.ts`: FieldProxy implementation for transformations
+- `src/decorators.ts`: Experimental decorator support
+- `src/types.ts`: Core TypeScript type definitions
 
 ## Testing Approach
 
 ### Python Tests
-- Unit tests for individual components (decorators, field discovery)
-- Integration tests with mock LLM backends
-- Live API tests marked with `@pytest.mark.requires_api_key`
-- Test files: `test_interview.py`, `test_interviewer.py`, `test_builder.py`, etc.
+- **Unit Tests**: Individual component testing (decorators, field discovery)
+- **Integration Tests**: Component interaction testing with mock LLMs
+- **Live API Tests**: Real OpenAI API tests (marked with `@pytest.mark.requires_api_key`)
+- **Coverage**: Run `make test-cov` for HTML coverage report in `htmlcov/`
+- **Test Files**: `test_*.py` naming convention in `tests/` directory
 
-### JavaScript Tests
-- Jest test suite with TypeScript support
-- Mock LLM backend for fast testing
-- Integration tests in `tests/integration/`
-- Test files follow `*.test.ts` naming convention
+### TypeScript Tests
+- **Framework**: Jest with ts-jest for TypeScript support
+- **Unit Tests**: Component testing with mock backends
+- **Integration Tests**: End-to-end scenarios in `tests/integration/`
+- **Coverage**: Generated in `coverage/` directory
+- **Test Files**: `*.test.ts` naming convention
+- **Configuration**: `jest.config.js` and `tsconfig.test.json`
 
 ## API Key Configuration
 
 Both implementations require OpenAI API key:
+
 ```bash
+# Option 1: Environment variable
 export OPENAI_API_KEY=your-api-key
+
+# Option 2: .env file in project root
+echo "OPENAI_API_KEY=your-api-key" > .env
+
+# Option 3: Pass to Interviewer constructor
+interviewer = Interviewer(interview, api_key="your-api-key")
 ```
 
 ## Common Development Tasks
 
 ### Adding a New Decorator (Python)
-1. Add decorator class to `chatfield-py/chatfield/decorators.py`
-2. Update field discovery in `interview.py` if needed
-3. Add transformation handling in `interviewer.py`
-4. Write tests in `tests/test_decorators.py`
+1. Define decorator class in `chatfield/decorators.py`
+2. Add to exports in `chatfield/__init__.py`
+3. Update field discovery in `interview.py` if needed
+4. Handle transformation in `interviewer.py` tool generation
+5. Write tests in `tests/test_decorators.py`
+6. Add example usage to `examples/`
 
 ### Adding a New Builder Method (TypeScript)
-1. Add method to `GathererBuilder` in `src/builders/gatherer-builder.ts`
-2. Update type definitions in `src/core/types.ts`
-3. Handle in LLM backend implementation
-4. Add tests to `tests/test_builder.test.ts`
+1. Add method to builder class in `src/builder.ts`
+2. Update type definitions in `src/builder-types.ts`
+3. Export from `src/index.ts`
+4. Handle in interviewer tool generation
+5. Write tests in `tests/builder.test.ts`
+6. Add example to `examples/basic-usage.ts`
 
 ### Running Examples
-- Python: `cd chatfield-py/examples && python bug_report.py`
-- TypeScript: `cd chatfield-js && npx tsx examples/basic-usage.ts`
+```bash
+# Python
+cd chatfield-py/examples
+python job_interview.py
+python restaurant_order.py
+
+# TypeScript
+cd chatfield-js
+npx tsx examples/basic-usage.ts
+npx tsx examples/job-interview.ts
+```
 
 ## Important Patterns
 
 ### Field Value Access (Python)
 ```python
-# After collection:
-interview.field_name          # Base string value
-interview.field_name.as_int   # Integer transformation
-interview.field_name.as_lang_fr # French translation
+# During definition
+class MyInterview(Interview):
+    @must("be specific")
+    @as_int
+    @as_lang.fr
+    def age(): "Your age"
+
+# After collection
+interview.age              # "25" (base string value)
+interview.age.as_int       # 25 (integer)
+interview.age.as_lang_fr   # "vingt-cinq" (French translation)
+interview.age.as_quote     # "I am 25 years old" (original quote)
 ```
 
 ### Builder Pattern (TypeScript)
 ```typescript
 const Form = chatfield()
-  .field('name', 'Your name')
-  .must('include first and last')
-  .field('email', 'Email address')
+  .type("Contact Form")
+  .desc("Collect contact information")
+  .field("name", "Your full name")
+    .must("include first and last")
+    .hint("Format: First Last")
+  .field("email", "Email address")
+    .must("be valid email format")
+    .asString()  // Explicit type
+  .field("age", "Your age")
+    .asInt()
+    .must("be between 18 and 120")
   .build()
+
+// After collection
+const result = await Form.gather()
+result.name        // string
+result.age         // number (transformed)
+```
+
+### Decorator Pattern (Python)
+```python
+@alice("Interviewer")
+@alice.trait("friendly and professional")
+@bob("Job Candidate")
+class JobInterview(Interview):
+    @must("include company name")
+    @must("mention specific role")
+    def desired_position(): "What position are you applying for?"
+    
+    @as_int
+    @must("be realistic number")
+    def years_experience(): "Years of relevant experience"
+    
+    @as_multi("Python", "JavaScript", "Go", "Rust")
+    def languages(): "Programming languages you know"
 ```
 
 ## Validation and Transformation
 
-Both implementations use LLM-powered validation rather than code-based rules:
+Both implementations use LLM-powered validation and transformation:
+
+### Validation Decorators/Methods
 - `@must` / `.must()`: Requirements the response must meet
-- `@reject` / `.reject()`: Patterns to avoid in responses
-- `@hint` / `.hint()`: Guidance for the user
-- Transformations (`as_int`, `as_bool`, etc.) are computed by the LLM during collection
+- `@reject` / `.reject()`: Patterns to avoid in responses  
+- `@hint` / `.hint()`: Guidance shown to the user
+
+### Transformation Decorators/Methods
+- `@as_int` / `.asInt()`: Parse to integer
+- `@as_float` / `.asFloat()`: Parse to float
+- `@as_bool` / `.asBool()`: Parse to boolean
+- `@as_list` / `.asList()`: Parse to list/array
+- `@as_json` / `.asJson()`: Parse as JSON object
+- `@as_percent` / `.asPercent()`: Parse to 0.0-1.0 range
+- `@as_lang.{code}` / `.asLang('code')`: Translate to language
+
+### Choice Cardinality
+- `@as_one` / `.asOne()`: Choose exactly one option
+- `@as_maybe` / `.asMaybe()`: Choose zero or one option
+- `@as_multi` / `.asMulti()`: Choose one or more options
+- `@as_any` / `.asAny()`: Choose zero or more options
+
+## LangGraph Integration
+
+Both implementations use LangGraph for conversation orchestration:
+
+### Graph Structure
+```
+┌──────────┐     ┌───────┐     ┌────────┐
+│initialize│ --> │ think │ --> │ listen │
+└──────────┘     └───────┘     └────────┘
+                     ^              │
+                     │              v
+                ┌────────┐     ┌───────┐
+                │teardown│ <-- │ tools │
+                └────────┘     └───────┘
+```
+
+### Node Responsibilities
+- **initialize**: Setup conversation, generate system prompt
+- **think**: LLM generates next message or decides to use tools
+- **listen**: Wait for user input (interrupt point)
+- **tools**: Process field updates with validation
+- **teardown**: Complete conversation, final message
+
+## Environment Configuration
+
+### VSCode Settings (.vscode/settings.json)
+- Python interpreter: Uses `python` command (not python3)
+- Python testing: pytest enabled with chatfield/tests path
+- Auto-formatting: Black and isort on save
+- Type checking: Basic mode with auto-imports
+
+### Python Environment
+- Virtual environment: `.venv` in chatfield-py/
+- Python version: 3.8+ required
+- Package mode: Editable install with `pip install -e .`
+
+### TypeScript Environment  
+- Node version: 20.0.0+ recommended
+- TypeScript: 5.0.0+ with strict mode
+- Module resolution: CommonJS for compatibility
 
 ## Known Considerations
 
-- Python implementation uses LangGraph for orchestration (more complex but powerful)
-- TypeScript implementation focuses on React/UI integration
-- Both require careful prompt engineering for validation
-- API rate limits should be considered for production use
-- Thread safety handled via separate Interviewer instances
-- Always use `python` to run Python commands, not python3, etc. because the .venv is always active and is used via python, pip, etc.
-- We do not run any test suite stuff right now because it is broken for unrelated reasons
+1. **Python uses `python` command**: Always use `python`, not `python3`, as .venv is configured for `python`
+2. **Test suite temporarily disabled**: Tests are currently broken for unrelated reasons
+3. **LangGraph complexity**: Python implementation uses more complex state management
+4. **React focus**: TypeScript implementation prioritizes React/UI integration
+5. **API rate limits**: Consider rate limiting for production use
+6. **Thread safety**: Each Interviewer maintains separate thread ID
+7. **Transformation computation**: All transformations computed by LLM during collection, not post-processing
+8. **Field discovery**: Python discovers fields via method inspection, TypeScript via builder calls
+9. **State persistence**: LangGraph checkpointer allows conversation resumption
+10. **Prompt engineering**: Validation quality depends on prompt crafting
+
+## Debugging Tips
+
+### Python Debugging
+```python
+# Enable debug logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Inspect Interview structure
+print(interview._chatfield)
+
+# Check field metadata
+print(interview._chatfield['fields']['field_name'])
+
+# View LangGraph state
+print(interviewer.graph.get_state())
+```
+
+### TypeScript Debugging
+```typescript
+// Enable LangSmith tracing
+process.env.LANGCHAIN_TRACING_V2 = "true"
+
+// Inspect Interview state
+console.log(interview._chatfield)
+
+// View generated tools
+console.log(interviewer.tools)
+
+// Check graph execution
+const result = await interviewer.graph.invoke(...)
+console.log(result)
+```
+
+## Contributing Guidelines
+
+1. **Maintain parity**: Keep Python and TypeScript implementations synchronized
+2. **Test coverage**: Write tests for all new features
+3. **Documentation**: Update CLAUDE.md files when adding features
+4. **Examples**: Provide example usage for new functionality
+5. **Type safety**: Ensure full type coverage in TypeScript
+6. **Prompt quality**: Test prompts with various LLM providers
+7. **Error handling**: Gracefully handle API failures and edge cases
