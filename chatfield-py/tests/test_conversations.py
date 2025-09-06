@@ -1,9 +1,11 @@
 """Tests for complete conversation flows with prefab user messages."""
 
-from langchain_core.language_models.fake import FakeListLLM
+import pytest
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 
 from chatfield import Interviewer, chatfield
+
+LLM_ID = os.getenv('LLM_ID', 'openai:gpt-4o')
 
 
 def describe_conversations():
@@ -79,3 +81,273 @@ def describe_conversations():
             
             # TODO: Activating traits is not implemented yet, I don't think.
             # assert traits.get('Vegan', {}).get('active') == True, "Vegan trait should be active"
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_handles_regular_order():
+            """Handles regular order without dietary restrictions."""
+            order = create_restaurant_order()
+            interviewer = Interviewer(order, thread_id="test-regular-order", llm_id=LLM_ID)
+            
+            prefab_inputs = [
+                'The Sir Digby Chicken Caesar sounds good',
+                'I\'ll have the grilled salmon',
+                'Chocolate mousse for dessert'
+            ]
+            
+            # Initial message
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process inputs
+            for user_input in prefab_inputs:
+                if order._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify completion
+            assert order._done, "Order should be complete"
+            assert order.starter in ["Sir Digby Chicken Caesar", "Garden salad"], f"Starter should be valid, got {order.starter}"
+            assert order.main_course == "Grilled salmon", f"Expected 'Grilled salmon', got {order.main_course}"
+            assert order.dessert == "Chocolate mousse", f"Expected 'Chocolate mousse', got {order.dessert}"
+
+    def describe_job_interview():
+        """Tests for job interview conversation flow."""
+        
+        def create_job_interview():
+            """Create job interview."""
+            return (chatfield()
+                .type("JobInterview")
+                .desc("Software Engineer position interview")
+                
+                .alice()
+                    .type("Hiring Manager")
+                
+                .bob()
+                    .type("Candidate")
+                    .trait.possible("career-changer", "mentions different industry or transferable skills")
+                
+                .field("experience")
+                    .desc("Tell me about your relevant experience")
+                    .must("specific examples")
+                
+                .field("has_mentored")
+                    .desc("Gives specific evidence of professionally mentoring junior colleagues")
+                    .confidential()
+                    .as_bool()
+                
+                .build())
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_detects_career_changer():
+            """Detects career change from conversation."""
+            interview = create_job_interview()
+            interviewer = Interviewer(interview, thread_id="test-career-change", llm_id=LLM_ID)
+            
+            prefab_inputs = [
+                "I spent 5 years in finance but taught myself programming. "
+                "I built a trading algorithm in Python that automated our daily reports, "
+                "saving the team 20 hours per week. I also created a dashboard using React.",
+                
+                "In my finance role, I regularly mentored junior analysts on Python programming "
+                "and helped them understand data structures and algorithms."
+            ]
+            
+            # Start conversation
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process inputs
+            for user_input in prefab_inputs:
+                if interview._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify data collection
+            assert interview.experience is not None, "Experience should be collected"
+            assert "finance" in interview.experience.lower(), "Should capture finance background"
+            assert "python" in interview.experience.lower(), "Should capture Python experience"
+            
+            # Check confidential field
+            assert interview.has_mentored is not None, "Mentoring should be detected"
+            assert interview.has_mentored.as_bool == True, "Should detect mentoring activity"
+            
+            # Check career-changer trait
+            traits = interview._chatfield['roles']['bob'].get('possible_traits', {})
+            if 'career-changer' in traits:
+                assert traits['career-changer'].get('active') == True, "Career changer trait should be active"
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_handles_technical_interview():
+            """Handles standard technical interview flow."""
+            interview = create_job_interview()
+            interviewer = Interviewer(interview, thread_id="test-technical", llm_id=LLM_ID)
+            
+            prefab_inputs = [
+                "I have 8 years of experience as a full-stack developer. "
+                "Most recently, I led the redesign of our e-commerce platform, "
+                "improving load times by 40% and increasing conversion rates.",
+                
+                "I've been a tech lead for 3 years, mentoring a team of 5 developers "
+                "through code reviews, pair programming, and weekly learning sessions."
+            ]
+            
+            # Start conversation
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process inputs
+            for user_input in prefab_inputs:
+                if interview._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify experience was captured
+            assert interview.experience is not None, "Experience should be collected"
+            assert "e-commerce" in interview.experience or "platform" in interview.experience, "Should capture project details"
+            
+            # Check mentoring detection
+            assert interview.has_mentored is not None, "Mentoring should be detected"
+            assert interview.has_mentored.as_bool == True, "Should detect mentoring activity"
+
+    def describe_number_conversation():
+        """Tests for number conversation with transformations."""
+        
+        def create_number_interview():
+            """Create number interview with transformations."""
+            return (chatfield()
+                .type("FavoriteNumber")
+                .desc("Let's talk about your favorite number")
+                
+                .alice()
+                    .type("Mathematician")
+                
+                .bob()
+                    .type("Number Enthusiast")
+                
+                .field("number")
+                    .desc("Your favorite number between 1 and 100")
+                    .must("a number between 1 and 100")
+                    .as_int()
+                    .as_bool('even', "True if even, False if odd")
+                    .as_one('parity', "even", "odd")
+                
+                .build())
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_collects_number_with_transformations():
+            """Collects number with proper transformations."""
+            interview = create_number_interview()
+            interviewer = Interviewer(interview, thread_id="test-number", llm_id=LLM_ID)
+            
+            prefab_inputs = ["My favorite number is 42"]
+            
+            # Start conversation
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process input
+            for user_input in prefab_inputs:
+                if interview._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify number was collected with transformations
+            assert interview._done, "Interview should be complete"
+            assert interview.number == "42", f"Expected '42', got {interview.number}"
+            assert interview.number.as_int == 42, f"Integer transformation should be 42, got {interview.number.as_int}"
+            assert interview.number.as_bool_even == True, "42 should be detected as even"
+            assert interview.number.as_one_parity == "even", "Parity should be 'even'"
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_handles_odd_number_transformations():
+            """Handles odd number with transformations."""
+            interview = create_number_interview()
+            interviewer = Interviewer(interview, thread_id="test-odd-number", llm_id=LLM_ID)
+            
+            prefab_inputs = ["I like the number 17"]
+            
+            # Start conversation
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process input
+            for user_input in prefab_inputs:
+                if interview._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify odd number transformations
+            assert interview._done, "Interview should be complete"
+            assert interview.number == "17", f"Expected '17', got {interview.number}"
+            assert interview.number.as_int == 17, f"Integer transformation should be 17, got {interview.number.as_int}"
+            assert interview.number.as_bool_even == False, "17 should be detected as odd"
+            assert interview.number.as_one_parity == "odd", "Parity should be 'odd'"
+
+    def describe_simple_conversations():
+        """Tests for simple conversation patterns."""
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_collects_name_and_email():
+            """Collects simple name and email fields."""
+            interview = (chatfield()
+                .type("ContactInfo")
+                .desc("Collecting contact information")
+                
+                .field("name")
+                    .desc("Your full name")
+                
+                .field("email")
+                    .desc("Your email address")
+                    .must("valid email format")
+                
+                .build())
+            
+            interviewer = Interviewer(interview, thread_id="test-contact", llm_id=LLM_ID)
+            
+            prefab_inputs = ["John Doe", "john.doe@example.com"]
+            
+            # Initial message
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process inputs
+            for user_input in prefab_inputs:
+                if interview._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify completion
+            assert interview._done, "Interview should be complete"
+            assert interview.name == "John Doe", f"Expected 'John Doe', got {interview.name}"
+            assert interview.email == "john.doe@example.com", f"Expected 'john.doe@example.com', got {interview.email}"
+        
+        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
+        def it_collects_boolean_field():
+            """Collects boolean preference field."""
+            interview = (chatfield()
+                .type("Preferences")
+                .desc("Learning about your preferences")
+                
+                .field("likes_coffee")
+                    .desc("Do you like coffee?")
+                    .as_bool()
+                
+                .build())
+            
+            interviewer = Interviewer(interview, thread_id="test-bool", llm_id=LLM_ID)
+            
+            prefab_inputs = ["Yes, I love coffee!"]
+            
+            # Start conversation
+            ai_message = interviewer.go(None)
+            assert ai_message is not None
+            
+            # Process input
+            for user_input in prefab_inputs:
+                if interview._done:
+                    break
+                ai_message = interviewer.go(user_input)
+            
+            # Verify boolean was collected
+            assert interview._done, "Interview should be complete"
+            assert interview.likes_coffee.as_bool == True, "Should detect positive response"
