@@ -1,12 +1,33 @@
 """Tests for complete conversation flows with prefab user messages."""
 
+import os
+import json
 import pytest
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 
 from chatfield import Interviewer, chatfield
 
-LLM_ID = os.getenv('LLM_ID', 'openai:gpt-4o')
+class FauxModel(FakeMessagesListChatModel):
+    """A faux model that always returns the same response."""
+    def bind_tools(self, *args, **kwargs):
+        print("Bind tools:", args, kwargs)
+        return self
 
+def tool_call(tool_name, **kwargs):
+    """Helper to create a tool call message."""
+    return AIMessage(content='', additional_kwargs={
+        'tool_calls': [
+            {
+                'id': 'call_id_goes_here',
+                'function': {
+                    'type': 'function',
+                    'name': tool_name,
+                    'arguments': json.dumps(kwargs),
+                },
+            }
+        ],
+    })
 
 def describe_conversations():
     """Tests for full conversation flows."""
@@ -14,7 +35,7 @@ def describe_conversations():
     def describe_restaurant_order():
         """Tests for restaurant order conversation flow."""
         
-        def create_restaurant_order():
+        def _create_restaurant_order():
             """Create restaurant order interview."""
             return (chatfield()
                 .type("Restaurant Order")
@@ -31,7 +52,7 @@ def describe_conversations():
                 
                 .field("starter")
                     .desc("starter or appetizer")
-                    .as_one('selection',"Sir Digby Chicken Caesar", "Shrimp cocktail", "Garden salad")
+                    .as_one('selection', "Sir Digby Chicken Caesar", "Shrimp cocktail", "Garden salad")
                 
                 .field("main_course")
                     .desc("Main course")
@@ -46,28 +67,45 @@ def describe_conversations():
         
         def it_adapts_to_vegan_preferences():
             """Adapts conversation when vegan preference detected."""
-            llm = FakeMessagesListChatModel(responses=["foo", 'bar', 'baz', 'qux', 'quux'])
+            # User messages are strings, everything else is from the model.
+            all_messages =[
+                None,
+                AIMessage(content='Welcome to the restaurant'),
 
-            order = create_restaurant_order()
-            interviewer = Interviewer(order, thread_id="test-vegan-order", llm=llm)
-            
-            # Prefab inputs for vegan customer
-            prefab_inputs = [
                 'I am vegan, so I need plant-based options only.',
-                'Garden salad please',
-                'Veggie pasta sounds perfect',
-                'Fruit sorbet would be great'
+                tool_call(
+                    'update_Restaurant_Order',
+                    starter={
+                        'value': 'Garden salad',
+                        'as_one_selection': 'Garden salad',
+                    },
+                    main_course={
+                        'value': 'Veggie pasta',
+                        'as_one_selection': 'Veggie pasta',
+                    },
+                    dessert={
+                        'value': 'Fruit sorbet',
+                        'as_one_selection': 'Fruit sorbet',
+                    },
+                ),
+                AIMessage(content='OK I submitted your order for all vegan stuff'),
             ]
-            
-            # Initial AI message
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if     isinstance(msg, AIMessage)]
+
+            llm = FauxModel(responses=llm_responses)
+
+            order = _create_restaurant_order()
+            interviewer = Interviewer(order, thread_id="test-vegan-order", llm=llm)
             
             # Process each input
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if order._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify the order was completed correctly
             assert order._done, "Order should be complete"
@@ -82,38 +120,64 @@ def describe_conversations():
             # TODO: Activating traits is not implemented yet, I don't think.
             # assert traits.get('Vegan', {}).get('active') == True, "Vegan trait should be active"
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_handles_regular_order():
             """Handles regular order without dietary restrictions."""
-            order = create_restaurant_order()
-            interviewer = Interviewer(order, thread_id="test-regular-order", llm_id=LLM_ID)
-            
-            prefab_inputs = [
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='Welcome to the restaurant! What can I get you started with?'),
+                
                 'The Sir Digby Chicken Caesar sounds good',
+                AIMessage(content='Great choice! And for your main course?'),
+                
                 'I\'ll have the grilled salmon',
-                'Chocolate mousse for dessert'
+                AIMessage(content='Excellent! And what would you like for dessert?'),
+                
+                'Chocolate mousse for dessert',
+                tool_call(
+                    'update_Restaurant_Order',
+                    starter={
+                        'value': 'Sir Digby Chicken Caesar',
+                        'as_one_selection': 'Sir Digby Chicken Caesar',
+                    },
+                    main_course={
+                        'value': 'Grilled salmon',
+                        'as_one_selection': 'Grilled salmon',
+                    },
+                    dessert={
+                        'value': 'Chocolate mousse',
+                        'as_one_selection': 'Chocolate mousse',
+                    },
+                ),
+                AIMessage(content='Perfect! Your order is complete.'),
             ]
             
-            # Initial message
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
             
-            # Process inputs
+            llm = FauxModel(responses=llm_responses)
+            
+            order = _create_restaurant_order()
+            interviewer = Interviewer(order, thread_id="test-regular-order", llm=llm)
+            
+            # Process each input
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if order._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify completion
             assert order._done, "Order should be complete"
-            assert order.starter in ["Sir Digby Chicken Caesar", "Garden salad"], f"Starter should be valid, got {order.starter}"
+            assert order.starter == "Sir Digby Chicken Caesar", f"Expected 'Sir Digby Chicken Caesar', got {order.starter}"
             assert order.main_course == "Grilled salmon", f"Expected 'Grilled salmon', got {order.main_course}"
             assert order.dessert == "Chocolate mousse", f"Expected 'Chocolate mousse', got {order.dessert}"
 
     def describe_job_interview():
         """Tests for job interview conversation flow."""
         
-        def create_job_interview():
+        def _create_job_interview():
             """Create job interview."""
             return (chatfield()
                 .type("JobInterview")
@@ -137,30 +201,48 @@ def describe_conversations():
                 
                 .build())
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_detects_career_changer():
             """Detects career change from conversation."""
-            interview = create_job_interview()
-            interviewer = Interviewer(interview, thread_id="test-career-change", llm_id=LLM_ID)
+            interview = _create_job_interview()
             
-            prefab_inputs = [
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='Hello! Let\'s start with your experience. Can you tell me about your relevant experience?'),
+                
                 "I spent 5 years in finance but taught myself programming. "
                 "I built a trading algorithm in Python that automated our daily reports, "
                 "saving the team 20 hours per week. I also created a dashboard using React.",
+                AIMessage(content='That\'s great experience! Have you mentored any junior colleagues?'),
                 
                 "In my finance role, I regularly mentored junior analysts on Python programming "
-                "and helped them understand data structures and algorithms."
+                "and helped them understand data structures and algorithms.",
+                tool_call(
+                    'update_JobInterview',
+                    experience={
+                        'value': 'I spent 5 years in finance but taught myself programming. I built a trading algorithm in Python that automated our daily reports, saving the team 20 hours per week. I also created a dashboard using React.',
+                    },
+                    has_mentored={
+                        'value': 'Yes, mentored junior analysts on Python programming',
+                        'as_bool': True,
+                    },
+                ),
+                AIMessage(content='Thank you for sharing your experience!'),
             ]
             
-            # Start conversation
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
+            
+            llm = FauxModel(responses=llm_responses)
+            interviewer = Interviewer(interview, thread_id="test-career-change", llm=llm)
             
             # Process inputs
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if interview._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify data collection
             assert interview.experience is not None, "Experience should be collected"
@@ -173,33 +255,53 @@ def describe_conversations():
             
             # Check career-changer trait
             traits = interview._chatfield['roles']['bob'].get('possible_traits', {})
-            if 'career-changer' in traits:
-                assert traits['career-changer'].get('active') == True, "Career changer trait should be active"
+            assert 'career-changer' in traits, "Career-changer trait should be tracked"
+            # TODO: Trait activation not yet implemented
+            # if 'career-changer' in traits:
+            #     assert traits['career-changer'].get('active') == True, "Career changer trait should be active"
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_handles_technical_interview():
             """Handles standard technical interview flow."""
-            interview = create_job_interview()
-            interviewer = Interviewer(interview, thread_id="test-technical", llm_id=LLM_ID)
+            interview = _create_job_interview()
             
-            prefab_inputs = [
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='Welcome! Please tell me about your relevant experience.'),
+                
                 "I have 8 years of experience as a full-stack developer. "
                 "Most recently, I led the redesign of our e-commerce platform, "
                 "improving load times by 40% and increasing conversion rates.",
+                AIMessage(content='Impressive! Have you mentored other developers?'),
                 
                 "I've been a tech lead for 3 years, mentoring a team of 5 developers "
-                "through code reviews, pair programming, and weekly learning sessions."
+                "through code reviews, pair programming, and weekly learning sessions.",
+                tool_call(
+                    'update_JobInterview',
+                    experience={
+                        'value': 'I have 8 years of experience as a full-stack developer. Most recently, I led the redesign of our e-commerce platform, improving load times by 40% and increasing conversion rates.',
+                    },
+                    has_mentored={
+                        'value': 'Yes, been a tech lead mentoring 5 developers',
+                        'as_bool': True,
+                    },
+                ),
+                AIMessage(content='Thank you for your time!'),
             ]
             
-            # Start conversation
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
+            
+            llm = FauxModel(responses=llm_responses)
+            interviewer = Interviewer(interview, thread_id="test-technical", llm=llm)
             
             # Process inputs
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if interview._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify experience was captured
             assert interview.experience is not None, "Experience should be collected"
@@ -212,7 +314,7 @@ def describe_conversations():
     def describe_number_conversation():
         """Tests for number conversation with transformations."""
         
-        def create_number_interview():
+        def _create_number_interview():
             """Create number interview with transformations."""
             return (chatfield()
                 .type("FavoriteNumber")
@@ -233,23 +335,41 @@ def describe_conversations():
                 
                 .build())
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_collects_number_with_transformations():
             """Collects number with proper transformations."""
-            interview = create_number_interview()
-            interviewer = Interviewer(interview, thread_id="test-number", llm_id=LLM_ID)
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='Hello! What is your favorite number between 1 and 100?'),
+                
+                "My favorite number is 42",
+                tool_call(
+                    'update_FavoriteNumber',
+                    number={
+                        'value': '42',
+                        'as_int': 42,
+                        'as_bool_even': True,
+                        'as_one_parity': 'even',
+                    },
+                ),
+                AIMessage(content='Great choice! 42 is a wonderful number.'),
+            ]
             
-            prefab_inputs = ["My favorite number is 42"]
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
             
-            # Start conversation
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            llm = FauxModel(responses=llm_responses)
+            
+            interview = _create_number_interview()
+            interviewer = Interviewer(interview, thread_id="test-number", llm=llm)
             
             # Process input
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if interview._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify number was collected with transformations
             assert interview._done, "Interview should be complete"
@@ -258,23 +378,41 @@ def describe_conversations():
             assert interview.number.as_bool_even == True, "42 should be detected as even"
             assert interview.number.as_one_parity == "even", "Parity should be 'even'"
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_handles_odd_number_transformations():
             """Handles odd number with transformations."""
-            interview = create_number_interview()
-            interviewer = Interviewer(interview, thread_id="test-odd-number", llm_id=LLM_ID)
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='What is your favorite number between 1 and 100?'),
+                
+                "I like the number 17",
+                tool_call(
+                    'update_FavoriteNumber',
+                    number={
+                        'value': '17',
+                        'as_int': 17,
+                        'as_bool_even': False,
+                        'as_one_parity': 'odd',
+                    },
+                ),
+                AIMessage(content='17 is a great prime number!'),
+            ]
             
-            prefab_inputs = ["I like the number 17"]
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
             
-            # Start conversation
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            llm = FauxModel(responses=llm_responses)
+            
+            interview = _create_number_interview()
+            interviewer = Interviewer(interview, thread_id="test-odd-number", llm=llm)
             
             # Process input
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if interview._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify odd number transformations
             assert interview._done, "Interview should be complete"
@@ -286,9 +424,35 @@ def describe_conversations():
     def describe_simple_conversations():
         """Tests for simple conversation patterns."""
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_collects_name_and_email():
             """Collects simple name and email fields."""
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='Hello! Let me collect your contact information. What is your full name?'),
+                
+                "John Doe",
+                AIMessage(content='Thank you, John. What is your email address?'),
+                
+                "john.doe@example.com",
+                tool_call(
+                    'update_ContactInfo',
+                    name={
+                        'value': 'John Doe',
+                    },
+                    email={
+                        'value': 'john.doe@example.com',
+                    },
+                ),
+                AIMessage(content='Thank you! I have your contact information.'),
+            ]
+            
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
+            
+            llm = FauxModel(responses=llm_responses)
+            
             interview = (chatfield()
                 .type("ContactInfo")
                 .desc("Collecting contact information")
@@ -302,28 +466,44 @@ def describe_conversations():
                 
                 .build())
             
-            interviewer = Interviewer(interview, thread_id="test-contact", llm_id=LLM_ID)
-            
-            prefab_inputs = ["John Doe", "john.doe@example.com"]
-            
-            # Initial message
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            interviewer = Interviewer(interview, thread_id="test-contact", llm=llm)
             
             # Process inputs
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if interview._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify completion
             assert interview._done, "Interview should be complete"
             assert interview.name == "John Doe", f"Expected 'John Doe', got {interview.name}"
             assert interview.email == "john.doe@example.com", f"Expected 'john.doe@example.com', got {interview.email}"
         
-        @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Requires OpenAI API key")
         def it_collects_boolean_field():
             """Collects boolean preference field."""
+            # User messages are strings, everything else is from the model.
+            all_messages = [
+                None,
+                AIMessage(content='Let me learn about your preferences. Do you like coffee?'),
+                
+                "Yes, I love coffee!",
+                tool_call(
+                    'update_Preferences',
+                    likes_coffee={
+                        'value': 'Yes, I love coffee!',
+                        'as_bool': True,
+                    },
+                ),
+                AIMessage(content='Great! Coffee lovers unite!'),
+            ]
+            
+            # From the list above, the AI will return all langchain messages. The user will send either None or a string.
+            prefab_inputs = [msg for msg in all_messages if not isinstance(msg, AIMessage)]
+            llm_responses = [msg for msg in all_messages if isinstance(msg, AIMessage)]
+            
+            llm = FauxModel(responses=llm_responses)
+            
             interview = (chatfield()
                 .type("Preferences")
                 .desc("Learning about your preferences")
@@ -334,19 +514,14 @@ def describe_conversations():
                 
                 .build())
             
-            interviewer = Interviewer(interview, thread_id="test-bool", llm_id=LLM_ID)
-            
-            prefab_inputs = ["Yes, I love coffee!"]
-            
-            # Start conversation
-            ai_message = interviewer.go(None)
-            assert ai_message is not None
+            interviewer = Interviewer(interview, thread_id="test-bool", llm=llm)
             
             # Process input
             for user_input in prefab_inputs:
+                ai_message = interviewer.go(user_input)
                 if interview._done:
                     break
-                ai_message = interviewer.go(user_input)
+                assert ai_message is not None
             
             # Verify boolean was collected
             assert interview._done, "Interview should be complete"
