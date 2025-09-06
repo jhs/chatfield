@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with the Python test sui
 
 ## Overview
 
-This directory contains the comprehensive test suite for the Chatfield Python library, covering unit tests, integration tests, and conversation flow tests. The tests validate decorator functionality, field discovery, interview orchestration, and transformation capabilities.
+This directory contains the comprehensive test suite for the Chatfield Python library, covering unit tests, integration tests, and conversation flow tests. The tests validate decorator functionality, field discovery, interview orchestration, and transformation capabilities. The test suite uses pytest with pytest-describe for BDD-style test organization that harmonizes with the TypeScript implementation.
 
 ## Project Structure
 
@@ -26,43 +26,69 @@ chatfield-py/tests/
 ### test_interview.py
 - **Purpose**: Tests the core Interview class functionality
 - **Coverage**: Field discovery, property access, state management
-- **Key Classes**: `TestInterviewBasics`, `TestFieldDiscovery`, `TestInterviewState`
+- **Structure**: Uses `describe_interview` with nested `describe_*` and `it_*` functions
+- **Test Examples**:
+  - `describe_field_discovery` → `it_uses_field_name_when_no_description`
+  - `describe_field_access` → `it_returns_none_for_uncollected_fields`
+  - `describe_completion_state` → `it_starts_with_done_as_false`
 - **Focus**: Base class behavior without LLM interaction
 
 ### test_interviewer.py
 - **Purpose**: Tests the Interviewer class that orchestrates conversations
 - **Coverage**: LangGraph integration, tool binding, state transitions
-- **Key Classes**: `TestInterviewerBasics`, `TestInterviewerTools`
+- **Structure**: BDD-style with `describe_interviewer` and nested functions
+- **Test Examples**:
+  - `describe_initialization` → `it_creates_interviewer_with_default_model`
+  - `describe_tool_generation` → `it_generates_tools_for_all_fields`
 - **Mock Strategy**: Uses mock LLM backends for fast, deterministic tests
 
 ### test_interviewer_conversation.py
 - **Purpose**: Tests conversation flow and message handling
 - **Coverage**: State management, field collection, validation flow
-- **Key Classes**: `TestConversationFlow`, `TestValidation`
+- **Structure**: BDD-style organization matching TypeScript tests
+- **Test Examples**:
+  - `describe_conversation_flow` → `it_handles_multi_turn_conversations`
+  - `describe_field_progression` → `it_collects_fields_in_order`
 - **Focus**: Multi-turn conversation dynamics
 
 ### test_builder.py
 - **Purpose**: Tests the fluent builder API
 - **Coverage**: Method chaining, field configuration, decorator application
-- **Key Classes**: `TestBuilderAPI`, `TestFieldConfiguration`
+- **Structure**: `describe_builder` with nested test functions
+- **Test Examples**:
+  - `describe_chaining` → `it_supports_method_chaining`
+  - `describe_field_configuration` → `it_applies_must_rules`
+  - `describe_transformations` → `it_adds_type_transformations`
 - **Validation**: Ensures builder creates correct Interview instances
 
 ### test_field_proxy.py
 - **Purpose**: Tests the FieldProxy string subclass
 - **Coverage**: String behavior, transformation properties, attribute access
-- **Key Classes**: `TestFieldProxy`, `TestTransformations`
+- **Structure**: `describe_field_proxy` with nested describe blocks
+- **Test Examples**:
+  - `describe_string_behavior` → `it_acts_as_normal_string`
+  - `describe_transformations` → `it_provides_transformation_access`
+  - `describe_attribute_access` → `it_returns_transformation_values`
 - **Special**: Tests dynamic property generation (`.as_int`, `.as_lang_fr`, etc.)
 
 ### test_custom_transformations.py
 - **Purpose**: Tests transformation decorators
 - **Coverage**: `@as_int`, `@as_float`, `@as_bool`, `@as_lang.*`, cardinality
-- **Key Classes**: `TestTransformationDecorators`, `TestCardinality`
+- **Structure**: `describe_transformations` with type-specific describe blocks
+- **Test Examples**:
+  - `describe_numeric_transformations` → `it_transforms_to_int`
+  - `describe_language_transformations` → `it_translates_to_french`
+  - `describe_cardinality` → `it_chooses_one_option`
 - **Validation**: Ensures transformations are properly registered
 
 ### test_conversations.py
 - **Purpose**: Integration tests with real conversation scenarios
 - **Coverage**: End-to-end conversation flows, complex validations
-- **Key Classes**: `TestFullConversations`, `TestEdgeCases`
+- **Structure**: `describe_conversations` with scenario-based tests
+- **Test Examples**:
+  - `describe_full_conversations` → `it_completes_job_interview`
+  - `describe_edge_cases` → `it_handles_invalid_responses`
+  - `describe_validation` → `it_enforces_must_rules`
 - **Note**: May use `@pytest.mark.requires_api_key` for live API tests
 
 ## Development Commands
@@ -157,21 +183,33 @@ def test_validation(mock_must):
 
 ## Testing Approach
 
-### Test Structure
+### BDD Test Structure
 
-Each test follows the Arrange-Act-Assert pattern:
+Tests use pytest-describe for BDD-style organization that matches TypeScript:
 
 ```python
-def test_example():
-    # Arrange - Set up test data and mocks
-    interview = create_test_interview()
+def describe_component():
+    """Tests for the Component."""
     
-    # Act - Perform the operation
-    result = interview.some_method()
-    
-    # Assert - Verify the outcome
-    assert result == expected_value
+    def describe_feature():
+        """Tests for specific feature."""
+        
+        def it_does_something_specific():
+            """Clear description of expected behavior."""
+            # Arrange - Set up test data and mocks
+            interview = create_test_interview()
+            
+            # Act - Perform the operation
+            result = interview.some_method()
+            
+            # Assert - Verify the outcome
+            assert result == expected_value
 ```
+
+### Test Naming Convention
+- **Describe blocks**: `describe_*` functions group related tests
+- **Test functions**: `it_*` functions describe specific behaviors
+- **Docstrings**: Provide clear descriptions matching TypeScript test names
 
 ### Coverage Goals
 
@@ -198,6 +236,15 @@ def basic_interview():
         .type("TestInterview")
         .field("name").desc("Your name")
         .build())
+
+# Used within describe blocks:
+def describe_with_fixtures():
+    @pytest.fixture
+    def interview():
+        return create_test_interview()
+    
+    def it_uses_fixture(interview):
+        assert interview is not None
 ```
 
 ### Parameterized Tests
@@ -223,28 +270,50 @@ async def test_async_interview():
 
 ## Known Considerations
 
-1. **Test Isolation**: Each test should be independent and not affect others
-2. **Mock Cleanup**: Ensure mocks are properly reset between tests
-3. **API Key Tests**: Tests requiring real API keys are marked and skippable
-4. **Performance**: Keep unit tests fast (< 10 seconds for entire suite)
-5. **Determinism**: Tests should produce same results on every run
-6. **Python Path**: Tests may need to add parent directory to sys.path
-7. **State Leakage**: Be careful with class-level attributes in Interview
-8. **LangGraph State**: Test state reducers and merging logic carefully
+1. **Test Harmonization**: Test names and descriptions match TypeScript exactly
+2. **BDD Structure**: Use pytest-describe for consistent organization
+3. **Test Isolation**: Each test should be independent and not affect others
+4. **Mock Cleanup**: Ensure mocks are properly reset between tests
+5. **API Key Tests**: Tests requiring real API keys are marked and skippable
+6. **Performance**: Keep unit tests fast (< 10 seconds for entire suite)
+7. **Determinism**: Tests should produce same results on every run
+8. **Python Path**: Tests may need to add parent directory to sys.path
+9. **State Leakage**: Be careful with class-level attributes in Interview
+10. **LangGraph State**: Test state reducers and merging logic carefully
 
 ## Adding New Tests
 
 When creating new tests:
 
 1. Place in appropriate test file based on component being tested
-2. Follow existing naming conventions (`test_*.py`, `Test*` classes)
-3. Use descriptive test method names that explain what's being tested
-4. Include docstrings for complex test scenarios
-5. Add appropriate markers (`@pytest.mark.slow`, `@pytest.mark.requires_api_key`)
-6. Use fixtures for common setup
-7. Mock external dependencies
-8. Test both success and failure cases
-9. Update this CLAUDE.md file if adding new test files
+2. Follow BDD structure with `describe_*` and `it_*` functions
+3. Match TypeScript test descriptions exactly for corresponding tests
+4. Use descriptive names that explain what's being tested
+5. Include docstrings that match TypeScript test descriptions
+6. Add appropriate markers (`@pytest.mark.slow`, `@pytest.mark.requires_api_key`)
+7. Use fixtures for common setup
+8. Mock external dependencies
+9. Test both success and failure cases
+10. Update this CLAUDE.md file if adding new test files
+
+### Example of Harmonized Test:
+```python
+# Python (test_interview.py)
+def describe_interview():
+    def describe_field_discovery():
+        def it_uses_field_name_when_no_description():
+            """Uses field name as description when none provided."""
+            # Test implementation
+
+# TypeScript (interview.test.ts)
+describe('Interview', () => {
+  describe('field discovery', () => {
+    it('uses field name when no description', () => {
+      // Test implementation
+    })
+  })
+})
+```
 
 ## Common Issues and Solutions
 

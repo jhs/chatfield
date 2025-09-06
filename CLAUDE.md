@@ -8,6 +8,14 @@ Chatfield is a dual-implementation library that transforms data collection from 
 
 **Core Concept**: Replace traditional form fields with conversational dialogues that intelligently gather, validate, and transform structured data through natural language interactions.
 
+**Key Features**:
+- LLM-powered conversational data collection
+- Smart validation and transformation of responses
+- LangGraph-based conversation orchestration
+- Both decorator and builder pattern APIs
+- Full TypeScript type safety
+- React and CopilotKit integrations
+
 ## Project Structure
 
 ```
@@ -23,12 +31,15 @@ Chatfield/
 │   │   ├── serialization.py     # Interview state serialization
 │   │   ├── presets.py           # Common preset decorators and configurations
 │   │   └── visualization.py     # Graph visualization utilities
-│   ├── tests/                   # Test suite (test_*.py naming)
+│   ├── tests/                   # Test suite (test_*.py naming, pytest-describe structure)
 │   │   ├── test_interview.py    # Interview class tests
 │   │   ├── test_interviewer.py  # Interviewer orchestration tests
+│   │   ├── test_interviewer_conversation.py # Conversation flow tests
 │   │   ├── test_builder.py      # Builder API tests
 │   │   ├── test_field_proxy.py  # FieldProxy tests
-│   │   └── test_conversations.py # End-to-end conversation tests
+│   │   ├── test_custom_transformations.py # Transformation decorator tests
+│   │   ├── test_conversations.py # End-to-end conversation tests
+│   │   └── CLAUDE.md            # Test suite documentation
 │   ├── examples/                # Python usage examples
 │   │   ├── job_interview.py     # Job application interview example
 │   │   ├── restaurant_order.py  # Restaurant ordering conversation
@@ -52,12 +63,17 @@ Chatfield/
     │       ├── react.ts         # React hooks (useGatherer, etc.)
     │       ├── react-components.tsx # UI components
     │       └── copilotkit.tsx   # CopilotKit integration
-    ├── tests/                   # Jest test suite (*.test.ts naming)
-    │   ├── interview.test.ts    # Interview class tests
+    ├── tests/                   # Jest test suite (*.test.ts naming, mirrors Python)
+    │   ├── interview.test.ts    # Interview class tests (mirrors test_interview.py)
     │   ├── interviewer.test.ts  # Interviewer orchestration tests
+    │   ├── interviewer_conversation.test.ts # Conversation flow tests
     │   ├── builder.test.ts      # Builder API tests
+    │   ├── field_proxy.test.ts  # FieldProxy implementation tests
+    │   ├── custom_transformations.test.ts # Transformation system tests
     │   ├── conversations.test.ts # End-to-end conversation tests
-    │   └── integration/         # Integration test scenarios
+    │   ├── integration/         # Integration test scenarios
+    │   │   └── react.ts        # React hooks integration tests
+    │   └── CLAUDE.md            # Test suite documentation
     ├── examples/                # TypeScript/JavaScript examples
     │   ├── basic-usage.ts       # Simple builder pattern example
     │   ├── job-interview.ts     # Job application (mirrors Python)
@@ -155,17 +171,19 @@ npx tsx minimal.ts                                  # Test OpenAI API connection
 - **Field Discovery**: Automatic via method inspection in `Interview.__init__`
 - **Data Storage**: `_chatfield` dictionary structure on Interview instances
 - **Transformations**: FieldProxy provides `field.as_int`, `field.as_lang_fr`, etc.
-- **Dependencies**: langchain (0.3.27+), langgraph (0.6.4+), openai (1.99.6+), pydantic (2.11.7+)
+- **Testing**: pytest with pytest-describe for BDD-style test organization
+- **Dependencies**: langchain (0.3.27+), langgraph (0.6.4+), langchain-openai (0.3.29+), openai (1.99.6+), pydantic (2.11.7+)
 
 ### TypeScript Implementation Details
 
 - **Primary API**: Fluent builder pattern (`chatfield().field().must()`)
 - **Alternative APIs**: Decorators (experimental), schema-based
-- **Orchestration**: LangGraph TypeScript with state management
+- **Orchestration**: LangGraph TypeScript with state management (v0.4.6+)
 - **Type Safety**: Full TypeScript type inference and checking
-- **React Integration**: Hooks (`useGatherer`) and components
+- **React Integration**: Hooks (`useConversation`, `useGatherer`) and components
 - **CopilotKit**: Sidebar component for conversational UI
-- **Dependencies**: @langchain/core (0.3.72+), openai (4.70.0+), reflect-metadata, zod
+- **Testing**: Jest with test structure mirroring Python implementation
+- **Dependencies**: @langchain/core (0.3.72+), @langchain/langgraph (0.4.6+), @langchain/openai (0.6.9+), openai (4.70.0+), zod, reflect-metadata
 
 ### Synchronization Requirements
 
@@ -174,7 +192,9 @@ npx tsx minimal.ts                                  # Test OpenAI API connection
 - Class/function names identical (e.g., `Interview`, `Interviewer`, `FieldProxy`)
 - Method names preserved (e.g., `_name()`, `_pretty()`, `as_int`)
 - Test structure mirrors Python (e.g., `test_builder.py` → `builder.test.ts`)
-- Only deviate for language-specific requirements
+- Test descriptions match exactly between implementations
+- Only deviate for language-specific requirements (e.g., async/await, TypeScript types)
+- Both use BDD-style test organization (pytest-describe in Python, nested describe/it in Jest)
 
 ## Key Files to Understand
 
@@ -197,19 +217,24 @@ npx tsx minimal.ts                                  # Test OpenAI API connection
 ## Testing Approach
 
 ### Python Tests
+- **Framework**: pytest with pytest-describe for BDD-style organization
+- **Structure**: Nested `describe_*` and `it_*` functions for test organization
 - **Unit Tests**: Individual component testing (decorators, field discovery)
 - **Integration Tests**: Component interaction testing with mock LLMs
 - **Live API Tests**: Real OpenAI API tests (marked with `@pytest.mark.requires_api_key`)
 - **Coverage**: Run `make test-cov` for HTML coverage report in `htmlcov/`
 - **Test Files**: `test_*.py` naming convention in `tests/` directory
+- **Test Harmonization**: Test names and descriptions match TypeScript implementation
 
 ### TypeScript Tests
 - **Framework**: Jest with ts-jest for TypeScript support
+- **Structure**: Nested `describe/it` blocks mirroring Python's pytest-describe
 - **Unit Tests**: Component testing with mock backends
 - **Integration Tests**: End-to-end scenarios in `tests/integration/`
 - **Coverage**: Generated in `coverage/` directory
-- **Test Files**: `*.test.ts` naming convention
+- **Test Files**: `*.test.ts` naming convention (mirrors Python's `test_*.py`)
 - **Configuration**: `jest.config.js` and `tsconfig.test.json`
+- **Test Harmonization**: Test names and descriptions match Python implementation exactly
 
 ## API Key Configuration
 
@@ -383,8 +408,8 @@ Both implementations use LangGraph for conversation orchestration:
 ## Known Considerations
 
 1. **Python uses `python` command**: Always use `python`, not `python3`, as .venv is configured for `python`
-2. **Test suite temporarily disabled**: Tests are currently broken for unrelated reasons
-3. **LangGraph complexity**: Python implementation uses more complex state management
+2. **Test harmonization**: Both implementations use BDD-style test organization with matching test descriptions
+3. **LangGraph versions**: Python uses langgraph 0.6.4+, TypeScript uses @langchain/langgraph 0.4.6+
 4. **React focus**: TypeScript implementation prioritizes React/UI integration
 5. **API rate limits**: Consider rate limiting for production use
 6. **Thread safety**: Each Interviewer maintains separate thread ID
@@ -392,6 +417,8 @@ Both implementations use LangGraph for conversation orchestration:
 8. **Field discovery**: Python discovers fields via method inspection, TypeScript via builder calls
 9. **State persistence**: LangGraph checkpointer allows conversation resumption
 10. **Prompt engineering**: Validation quality depends on prompt crafting
+11. **Import differences**: Python uses relative imports, TypeScript uses absolute from src/
+12. **Async patterns**: TypeScript uses async/await throughout, Python uses sync with async options
 
 ## Debugging Tips
 
@@ -430,9 +457,12 @@ console.log(result)
 ## Contributing Guidelines
 
 1. **Maintain parity**: Keep Python and TypeScript implementations synchronized
-2. **Test coverage**: Write tests for all new features
-3. **Documentation**: Update CLAUDE.md files when adding features
-4. **Examples**: Provide example usage for new functionality
-5. **Type safety**: Ensure full type coverage in TypeScript
-6. **Prompt quality**: Test prompts with various LLM providers
-7. **Error handling**: Gracefully handle API failures and edge cases
+2. **Test coverage**: Write tests for all new features using BDD style
+3. **Test naming**: Use identical test descriptions between Python and TypeScript
+4. **Documentation**: Update CLAUDE.md files when adding features
+5. **Examples**: Provide example usage for new functionality in both languages
+6. **Type safety**: Ensure full type coverage in TypeScript
+7. **Prompt quality**: Test prompts with various LLM providers
+8. **Error handling**: Gracefully handle API failures and edge cases
+9. **Code style**: Follow language-specific conventions (Black for Python, ESLint for TypeScript)
+10. **Version sync**: Update version numbers in both pyproject.toml and package.json together

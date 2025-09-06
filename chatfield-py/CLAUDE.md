@@ -1,8 +1,10 @@
-# CLAUDE.md - Chatfield Implementation Guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code when working with the Python implementation of Chatfield.
 
 ## Overview
 
-Chatfield is a Python package that transforms data gathering from rigid forms into conversational dialogues powered by LLMs. It uses a decorator-based API to define fields and validation rules, then leverages LangGraph to orchestrate natural conversations that collect structured data.
+Chatfield is a Python package (v0.2.0) that transforms data gathering from rigid forms into conversational dialogues powered by LLMs. It uses a decorator-based API to define fields and validation rules, then leverages LangGraph to orchestrate natural conversations that collect structured data.
 
 ## Core Architecture
 
@@ -14,16 +16,37 @@ Chatfield is a Python package that transforms data gathering from rigid forms in
 4. **Stateful conversation** - LangGraph manages conversation state and flow
 5. **Transformation proxies** - Field values provide transformed access via attributes
 
-## Implementation Structure
+## Project Structure
 
 ```
-chatfield-py/chatfield/
-├── __init__.py          # Main exports
-├── interview.py         # Interview base class
-├── interviewer.py       # Interviewer with LangGraph orchestration
-├── decorators.py        # All decorator implementations
-├── field_proxy.py       # FieldProxy string subclass (imported by interview.py)
-└── presets.py           # Common preset decorators (future)
+chatfield-py/
+├── chatfield/                   # Core Python package
+│   ├── __init__.py             # Main exports and public API
+│   ├── interview.py            # Interview base class with field discovery
+│   ├── interviewer.py          # LangGraph-based conversation orchestration
+│   ├── decorators.py           # All decorator implementations
+│   ├── field_proxy.py          # FieldProxy string subclass for transformations
+│   ├── builder.py              # Fluent builder API (alternative to decorators)
+│   ├── serialization.py        # Interview state serialization
+│   ├── presets.py              # Common preset decorators
+│   └── visualization.py        # Graph visualization utilities
+├── tests/                       # Test suite (pytest-describe structure)
+│   ├── test_interview.py       # Interview class tests
+│   ├── test_interviewer.py     # Interviewer orchestration tests
+│   ├── test_interviewer_conversation.py # Conversation flow tests
+│   ├── test_builder.py         # Builder API tests
+│   ├── test_field_proxy.py     # FieldProxy tests
+│   ├── test_custom_transformations.py # Transformation decorator tests
+│   ├── test_conversations.py   # End-to-end conversation tests
+│   └── CLAUDE.md               # Test suite documentation
+├── examples/                    # Usage examples
+│   ├── job_interview.py        # Job application example
+│   ├── restaurant_order.py     # Restaurant ordering
+│   ├── tech_request.py         # Technical support request
+│   └── favorite_number.py      # Simple validation example
+├── Makefile                     # Development shortcuts
+├── pyproject.toml              # Package configuration
+└── README.md                   # User documentation
 ```
 
 ## Core Components
@@ -90,7 +113,34 @@ This allows natural access patterns:
 - `field.as_lang_fr` - French translation
 - All string methods work normally
 
-### 3. Interviewer Class (`interviewer.py`)
+### 3. Builder API (`builder.py`)
+
+Alternative fluent API for defining interviews:
+
+```python
+from chatfield.builder import chatfield
+
+interview = (chatfield()
+    .type("InterviewType")
+    .desc("Interview description")
+    .alice("Interviewer role")
+    .bob("Interviewee role")
+    .field("field_name")
+        .desc("Field description")
+        .must("validation rule")
+        .reject("pattern to avoid")
+        .hint("user guidance")
+        .asInt()  # Type transformation
+    .build())
+```
+
+The builder:
+- Provides method chaining for field configuration
+- Generates Interview instances with proper metadata
+- Supports all decorators as methods
+- Offers better IDE autocomplete than decorators
+
+### 4. Interviewer Class (`interviewer.py`)
 
 Manages conversation flow using LangGraph:
 
@@ -287,18 +337,128 @@ interview.years_experience.as_int   # 5
 interview.years_experience.as_lang_fr # "cinq"
 ```
 
-## Testing Strategy
+## Testing Approach
 
-1. **Unit tests** - Test individual components
-2. **Integration tests** - Test component interactions
-3. **Mock LLM tests** - Test without API calls
-4. **Live API tests** - Test with real OpenAI API
+### Test Organization
+The test suite uses pytest with pytest-describe for BDD-style test organization:
 
-## Future Enhancements
+```python
+def describe_interview():
+    """Tests for the Interview class."""
+    
+    def describe_field_discovery():
+        """Tests for field discovery and defaults."""
+        
+        def it_uses_field_name_when_no_description():
+            """Uses field name as description when none provided."""
+            # Test implementation
+```
 
-- Multiple LLM provider support
-- Conversation resumption from checkpoints
-- Parallel field collection
-- Dynamic field generation
-- Custom validation functions
-- Webhook integrations
+### Test Categories
+1. **Unit tests** - Test individual components in isolation
+2. **Integration tests** - Test component interactions with mocked LLMs
+3. **Conversation tests** - Test full conversation flows
+4. **Live API tests** - Tests with real OpenAI API (marked with `@pytest.mark.requires_api_key`)
+
+### Test Synchronization
+Test names and descriptions are harmonized with the TypeScript implementation to ensure feature parity:
+- Python: `describe_*` and `it_*` functions
+- TypeScript: `describe()` and `it()` blocks
+- Both use identical test descriptions for corresponding tests
+
+### Running Tests
+```bash
+# Run all tests
+python -m pytest
+
+# Run specific test file
+python -m pytest tests/test_interview.py
+
+# Run with coverage
+python -m pytest --cov=chatfield --cov-report=html
+
+# Skip API tests
+python -m pytest -m "not requires_api_key"
+```
+
+## Development Commands
+
+```bash
+# Setup
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Testing
+make test           # Run all tests
+make test-cov       # Run with coverage report
+make test-fast      # Skip slow/API tests
+
+# Code Quality
+make format         # Format with Black & isort
+make lint          # Run flake8 linting
+make typecheck     # Run mypy type checking
+
+# Build
+make build         # Build distribution packages
+make clean         # Clean build artifacts
+```
+
+## Architecture Notes
+
+### Dependencies
+- **langchain** (0.3.27+): LLM abstractions and tools
+- **langgraph** (0.6.4+): Conversation state machine
+- **langchain-openai** (0.3.29+): OpenAI integration
+- **openai** (1.99.6+): Direct OpenAI API client
+- **pydantic** (2.11.7+): Data validation and serialization
+- **deepdiff** (6.0.0+): State comparison utilities
+
+### Builder API
+In addition to decorators, Chatfield provides a fluent builder API:
+
+```python
+from chatfield import chatfield
+
+interview = (chatfield()
+    .type("JobApplication")
+    .field("position")
+        .desc("Desired position")
+        .must("include company name")
+        .asString()
+    .field("experience")
+        .desc("Years of experience")
+        .asInt()
+        .must("be realistic")
+    .build())
+```
+
+## Important Patterns
+
+### Mock LLM for Testing
+```python
+class MockLLM:
+    def invoke(self, messages):
+        return AIMessage(content="mocked response")
+    
+    def bind_tools(self, tools):
+        self.tools = tools
+        return self
+```
+
+### State Serialization
+Interview instances can be serialized for LangGraph state:
+```python
+state = interview.model_dump()  # Serialize to dict
+interview.model_validate(state)  # Restore from dict
+```
+
+## Known Considerations
+
+1. **Python command**: Always use `python`, not `python3` (venv configured)
+2. **Test harmonization**: Test names match TypeScript implementation exactly
+3. **Import style**: Use relative imports within the package
+4. **Field discovery**: Methods without leading underscore become fields
+5. **Transformation naming**: Consistent `as_*` pattern for all transformations
+6. **Thread safety**: Each Interviewer maintains separate thread ID
+7. **LLM computation**: All transformations computed during collection, not post-processing
