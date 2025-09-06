@@ -1,5 +1,5 @@
 """Tests for the Interviewer class conversation functionality.
-Mirrors TypeScript's test_interviewer_conversation.test.ts
+Mirrors TypeScript's interviewer_conversation.test.ts with identical test descriptions.
 """
 
 import os
@@ -15,22 +15,25 @@ load_dotenv(env_file)
 from chatfield import Interview, Interviewer, chatfield
 
 
-class TestConversationFlow:
-    """Test conversation flow management."""
+def describe_interviewer_conversation():
+    """Tests for Interviewer conversation flow."""
     
-    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_go_method_basic(self):
-        """Test the go() method with real API."""
-        interview = (chatfield()
-            .type("SimpleInterview")
-            .field("name").desc("Your name")
-            .build())
-        interviewer = Interviewer(interview)
+    def describe_go_method():
+        """Tests for the go method conversation handling."""
         
-        # Start conversation
-        ai_message = interviewer.go(None)
-        
-        print(f"---------------\nAI Message:\n{ai_message}\n---------------")
-        assert ai_message is not None
-        assert isinstance(ai_message, str)
-        assert len(ai_message) > 0
+        @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
+        def it_starts_conversation_with_greeting():
+            """Starts conversation with greeting message."""
+            interview = (chatfield()
+                .type("SimpleInterview")
+                .field("name").desc("Your name")
+                .build())
+            interviewer = Interviewer(interview)
+            
+            # Start conversation
+            ai_message = interviewer.go(None)
+            
+            print(f"---------------\nAI Message:\n{ai_message}\n---------------")
+            assert ai_message is not None
+            assert isinstance(ai_message, str)
+            assert len(ai_message) > 0
