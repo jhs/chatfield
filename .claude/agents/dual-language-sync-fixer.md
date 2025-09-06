@@ -1,5 +1,5 @@
 ---
-name: cross-language-sync-fixer
+name: dual-language-sync-fixer
 description: Use this agent when the user types 'plsfix' (with or without additional context). This agent automatically synchronizes code changes between Python and TypeScript/JavaScript implementations in the Chatfield project by examining Git commit history for unpaired changes marked with '; plsfix' and porting them to the other language.\n\nExamples:\n<example>\nContext: User wants to ensure recent changes are synchronized across both language implementations.\nuser: "plsfix"\nassistant: "I'll check for any unpaired commits that need synchronization between Python and TypeScript implementations."\n<commentary>\nThe user typed 'plsfix', so use the cross-language-sync-fixer agent to check Git history and synchronize any unpaired changes.\n</commentary>\n</example>\n<example>\nContext: User made changes to Python implementation and wants them ported.\nuser: "plsfix - focus on the decorator changes"\nassistant: "I'll check for unpaired commits and synchronize them, paying special attention to decorator-related changes."\n<commentary>\nThe user typed 'plsfix' with additional guidance, so use the cross-language-sync-fixer agent with that context in mind.\n</commentary>\n</example>
 model: opus
 color: cyan
